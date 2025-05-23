@@ -77,11 +77,11 @@ game.import('extension', function () {
         },
         content() { },
         precontent() {
-            game.addGroup('佛', `<img src="${lib.assetURL}extension/三国全系列/image/SG_fo.png"width="30"height="30">`, '佛', {
+            game.addGroup('佛', `<img src=extension/三国全系列/image/SG_fo.png width="30"height="30">`, '佛', {
                 color: 'rgb(233, 200, 12)',
                 image: 'ext:三国全系列/image/SG_fo.png',
             });
-            game.addGroup('冥', `<img src="${lib.assetURL}extension/三国全系列/image/SG_ming.png"width="30"height="30">`, '冥', {
+            game.addGroup('冥', `<img src=extension/三国全系列/image/SG_ming.png width="30"height="30">`, '冥', {
                 color: 'rgb(58, 9, 136)',
                 image: 'ext:三国全系列/image/SG_ming.png',
             });
@@ -673,7 +673,7 @@ game.import('extension', function () {
             //————————————————————————————————————————————————————————————————————————————————————————————角色与技能
             lib.characterSort.三国全系列 = {
                 BOSS: ['SG_rulai', 'SG_houtu'],
-                SSSSS: ['SG_wuluo', 'SG_hehou', 'SG_duosidawang', 'SG_lanyang'],
+                SSSSS: ['SG_wuluo', 'SG_hehou', 'SG_duosidawang', 'SG_lanyang', 'SG_jicaiyao'],
                 SSSS: ['SG_tiefuxue', 'SG_jimeng', 'SG_muludawang', 'SG_xiahouling', 'SG_zhaoshu', 'SG_zicheng', 'SG_yaozhen', 'SG_zhangqiyingx'],
                 SSS: ['SG_huatuo', 'SG_chuge', 'SG_zhangqiying', 'SG_yueji', 'SG_kangseng', 'SG_mier', 'SG_lingshi', 'SG_shenyan', 'SG_murongxuan', 'SG_haitang'],
                 SS: ['SG_jinhuan', 'SG_dongtuna', 'SG_ahuinan', 'SG_haitang', 'SG_shuguobaifu', 'SG_chuge', 'SG_yueer', 'SG_shuchen'],
@@ -893,9 +893,6 @@ game.import('extension', function () {
             lib.translate.三国全系列_character_config = `三国全系列`;
             lib.config.all.characters.add('三国全系列');
             lib.config.characters.add('三国全系列');
-            game.saveConfig(`extension_三国全系列_characters_enable`, true); //扩展武将全部打开
-            game.saveConfig('characters', lib.config.characters);
-            game.saveConfig('defaultcharacters', lib.config.characters);
             const characterIntro = {
                 SG_rulai: '即佛教创始人释迦牟尼佛(Śākyamuni Buddha),其核心形象在佛教经典与文学作品中呈现出多维度的神性与人性交织',
                 SG_houtu: '又称后土皇地祇,是中国本土宗教与民俗信仰中最古老的神祇之一,其神格历经数千年演变,融合了自然崇拜、母系氏族记忆与道教神仙体系',
@@ -1720,7 +1717,7 @@ game.import('extension', function () {
                         return player.storage.SG_gongsheng > 2;
                     },
                     async content(event, trigger, player) {
-                        player.node.avatar.style.backgroundImage = `url('${lib.assetURL}extension/三国全系列/image/SG_mier1.jpg')`;
+                        player.node.avatar.style.backgroundImage = `url(extension/三国全系列/image/SG_mier1.jpg)`;
                         player.awakenSkill('SG_bianshen');
                         player.gainMaxHp(2);
                         player.recover(2);
@@ -1757,7 +1754,6 @@ game.import('extension', function () {
                         });
                         ('step 1');
                         if (result.bool) {
-                            player.logSkill('qilin_skill', trigger.player);
                             trigger.player.discard(result.links[0]);
                         }
                     },
@@ -1943,7 +1939,7 @@ game.import('extension', function () {
                         return player.storage.SG_lingfu > 2;
                     },
                     async content(event, trigger, player) {
-                        player.node.avatar.style.backgroundImage = `url('${lib.assetURL}extension/三国全系列/image/SG_shenyan1.jpg')`;
+                        player.node.avatar.style.backgroundImage = `url(extension/三国全系列/image/SG_shenyan1.jpg)`;
                         player.awakenSkill('SG_rumo');
                         player.gainMaxHp(2);
                         player.recover(2);
@@ -2052,6 +2048,7 @@ game.import('extension', function () {
                     usable: 1,
                     filterCard: true,
                     selectCard: 1,
+                    position: 'he',
                     check(card) {
                         if (get.type(card) == 'basic') {
                             return 12 - get.value(card);
@@ -2125,6 +2122,7 @@ game.import('extension', function () {
                         return get.type(card) == 'equip';
                     },
                     selectCard: 1,
+                    position: 'he',
                     async content(event, trigger, player) {
                         for (const npc of game.players.filter((q) => q.countCards('h') <= player.countCards('h'))) {
                             await npc.chooseUseTarget({ name: 'sha' }, true, false, 'nodistance');
@@ -2737,6 +2735,7 @@ game.import('extension', function () {
                         return get.color(card) == 'black';
                     },
                     selectCard: 1,
+                    position: 'he',
                     filterTarget(card, player, target) {
                         return target != player;
                     },
@@ -3065,7 +3064,7 @@ game.import('extension', function () {
                 }, //20
                 // 【玄天护心镜】
                 // 当你濒死时,弃置此装备将体力回复至1
-                // 受伤害时,你可进行判定,若为♥️,将此伤害反弹
+                // 受伤害时,你可进行判定,若为♥️️,将此伤害反弹
                 SG_xuantian: {
                     trigger: {
                         player: ['dying'],
@@ -3163,13 +3162,12 @@ game.import('extension', function () {
                         },
                     },
                 },
-                //【法护】:你可以将♥️牌当【净莲梵音】,♠️牌当【无懈可击】使用
+                //【法护】:你可以将♥️️牌当【净莲梵音】,♠️️牌当【无懈可击】使用
                 SG_fahu: {
                     enable: ['chooseToUse', 'chooseToRespond'],
                     check(card) {
                         return 8 - get.value(card);
                     },
-                    position: 'hes',
                     hiddenCard(player, name) {
                         if (name == 'wuxie') return player.countCards('hes', { suit: 'spade' }) > 0;
                         if (name == 'SG_jinglian') return player.countCards('hes', { suit: 'heart' }) > 0;
@@ -3180,12 +3178,13 @@ game.import('extension', function () {
                         return false;
                     },
                     selectCard: 1,
+                    position: 'hes',
                     filter(event, player) {
                         if (player.filterCard('SG_jinglian') && player.countCards('hes', { suit: 'heart' })) return true;
                         if (player.filterCard('wuxie') && player.countCards('hes', { suit: 'spade' })) return true;
                         return false;
                     },
-                    prompt: '将♥️牌当【净莲梵音】,♠️牌当【无懈可击】使用或打出',
+                    prompt: '将♥️️牌当【净莲梵音】,♠️️牌当【无懈可击】使用或打出',
                     viewAs(cards, player) {
                         var name;
                         switch (cards[0]?.suit) {
@@ -3225,7 +3224,7 @@ game.import('extension', function () {
                 //——————————————————————————————————————————————————————————————————————————————————————————————————紫丞
                 // 性别:男｜体力:3｜势力:群
                 // 魔策
-                // 每阶段每种花色限一次,你可以将♠️牌当【固若金汤】;♥️牌当【桃园结义】;♣️牌当【南蛮入侵】;♦️牌当【万箭齐发】使用,然后获得一枚<魔印>
+                // 每阶段每种花色限一次,你可以将♠️️牌当【固若金汤】;♥️️牌当【桃园结义】;♣️️牌当【南蛮入侵】;♦️️牌当【万箭齐发】使用,然后获得一枚<魔印>
                 SG_moce: {
                     init(player) {
                         player.SG_moce = {
@@ -3245,7 +3244,6 @@ game.import('extension', function () {
                     check(card) {
                         return 8 - get.value(card);
                     },
-                    position: 'hes',
                     hiddenCard(player, name) {
                         if (player.storage.SG_moce_1.includes(name)) {
                             return false;
@@ -3265,6 +3263,7 @@ game.import('extension', function () {
                         return false;
                     },
                     selectCard: 1,
+                    position: 'hes',
                     filter(event, player) {
                         for (const name in player.SG_moce) {
                             const suit = player.SG_moce[name];
@@ -3274,7 +3273,7 @@ game.import('extension', function () {
                         }
                         return false;
                     },
-                    prompt: '将♠️牌当【固若金汤】;♥️牌当【桃园结义】;♣️牌当【南蛮入侵】;♦️牌当【万箭齐发】使用或打出',
+                    prompt: '将♠️️牌当【固若金汤】;♥️️牌当【桃园结义】;♣️️牌当【南蛮入侵】;♦️️牌当【万箭齐发】使用或打出',
                     viewAs(cards, player) {
                         if (cards.length) {
                             for (const name in player.SG_moce) {
@@ -3365,7 +3364,7 @@ game.import('extension', function () {
                 //——————————————————————————————————————————————————————————————————————————————————————————————————靈氏
                 // 性别:女｜体力:3｜势力:魏
                 // 漠漠
-                // 锁定技,每当有角色判定后,若为♥️,你回复 1 点体力;若为♠️,你失去 1 点体力;若为♦️,你摸两张牌;若为♣️,你弃两张牌
+                // 锁定技,每当有角色判定后,若为♥️️,你回复 1 点体力;若为♠️️,你失去 1 点体力;若为♦️️,你摸两张牌;若为♣️️,你弃两张牌
                 SG_momo: {
                     trigger: {
                         global: ['judgeEnd'],
@@ -3438,13 +3437,14 @@ game.import('extension', function () {
                 }, //20
                 //——————————————————————————————————————————————————————————————————————————————————————————————————【谋华佗】 群 3体力
                 // 「青囊」
-                // 出牌阶段限两次,你可弃置一张牌令一名角色将手牌补至体力上限.目标角色可以展示一张♣️牌,然后你获得1个「药引」.
+                // 出牌阶段限两次,你可弃置一张牌令一名角色将手牌补至体力上限.目标角色可以展示一张♣️️牌,然后你获得1个「药引」.
                 // 你可以移除2个「药引」,使目标下次受到伤害时,转移给其攻击范围内另一角色
                 SG_qingnang: {
                     enable: 'phaseUse',
                     usable: 2,
                     filterCard: true,
                     selectCard: 1,
+                    position: 'he',
                     filterTarget: true,
                     selectTarget: 1,
                     mark: true,
@@ -4890,7 +4890,7 @@ game.import('extension', function () {
                         return evt.name == 'damage' && evt.source && evt.source != player;
                     },
                     async content(event, trigger, player) {
-                        player.node.avatar.style.backgroundImage = `url('${lib.assetURL}extension/三国全系列/image/SG_hehou1.jpg')`;
+                        player.node.avatar.style.backgroundImage = `url(extension/三国全系列/image/SG_hehou1.jpg)`;
                         player.awakenSkill('SG_lingyuan');
                         player.loseMaxHp();
                         player.hp = Math.ceil(player.maxHp / 2);
@@ -4932,6 +4932,7 @@ game.import('extension', function () {
                         return get.color(c) == 'red';
                     },
                     selectCard: 1,
+                    position: 'he',
                     async content(event, trigger, player) {
                         for (const i of game.players) {
                             i.recover();
@@ -5110,7 +5111,7 @@ game.import('extension', function () {
                 }, //20
                 //——————————————————————————————————————————————————————————————————————————————————————————————————张琪瑛 群势力 3勾玉
                 // 五行
-                // 任意牌进入弃牌堆时,你根据其花色获得🃏<金>/♠️<木>/♣️<水>/♥️<火>/♦️<土>标记
+                // 任意牌进入弃牌堆时,你根据其花色获得🃏<金>/♠️️<木>/♣️️<水>/♥️️<火>/♦️️<土>标记
                 // 游戏开始时,你获得四种标记.你可以弃置一枚标记,发动对应效果
                 // 当你首次失去所有标记时,减1点体力上限获得2点护甲,获得技能<箓生>并修改<真仪>
                 SG_wuxing: {
@@ -5204,7 +5205,7 @@ game.import('extension', function () {
                     },
                 }, //20
                 // 水
-                // 回合限一次,令一名角色回复1点体力,获得弃牌堆中一张♣️牌『若目标处于濒死,此效果回复量+1』
+                // 回合限一次,令一名角色回复1点体力,获得弃牌堆中一张♣️️牌『若目标处于濒死,此效果回复量+1』
                 SG_wuxing_club: {
                     enable: ['chooseToUse'],
                     usable: 1,
@@ -5594,6 +5595,7 @@ game.import('extension', function () {
                     selectTarget: 1,
                     filterCard: true,
                     selectCard: 1,
+                    position: 'he',
                     mark: true,
                     intro: {
                         content(storage, player) {
@@ -5670,16 +5672,20 @@ game.import('extension', function () {
                     },
                 },//40
                 // 【宿命】
-                // 当一名角色死亡时,你可以获得其一个技能.若其是女性,你摸一张牌
+                // 本局限三次,当一名角色死亡时,你可以获得其一个技能.若其是女性,你摸一张牌
                 SG_suming: {
+                    init(player) {
+                        player.storage.SG_suming = 3;
+                    },
                     trigger: {
                         global: ['dieEnd'],
                     },
                     forced: true,
                     filter(event, player) {
-                        return event.player.GAS().some((s) => !player.hasSkill(s));
+                        return event.player.GAS().some((s) => !player.hasSkill(s)) && player.storage.SG_suming > 0;
                     },
                     async content(event, trigger, player) {
+                        player.storage.SG_suming--;
                         if (trigger.player.sex == 'female') {
                             player.draw();
                         }
@@ -5791,9 +5797,9 @@ game.import('extension', function () {
                 },
                 SG_wuxing_club(player) {
                     if (player.storage.SG_wuxing) {
-                        return `回合限一次,令一名角色回复1点体力,获得弃牌堆中一张♣️牌,若目标处于濒死,此效果回复量+1`;
+                        return `回合限一次,令一名角色回复1点体力,获得弃牌堆中一张♣️️牌,若目标处于濒死,此效果回复量+1`;
                     }
-                    return `回合限一次,令一名角色回复1点体力,获得弃牌堆中一张♣️牌`;
+                    return `回合限一次,令一名角色回复1点体力,获得弃牌堆中一张♣️️牌`;
                 },
                 SG_wuxing_diamond(player) {
                     if (player.storage.SG_wuxing) {
@@ -5822,7 +5828,7 @@ game.import('extension', function () {
                 SG_shuangsheng_2: '煞',
                 SG_shuangsheng_2_info: '回合结束时,移除该标记,流失1点体力',
                 SG_suming: '宿命',
-                SG_suming_info: '当一名角色死亡时,你可以获得其一个技能.若其是女性,你摸一张牌',
+                SG_suming_info: '本局限三次,当一名角色死亡时,你可以获得其一个技能.若其是女性,你摸一张牌',
                 SG_lunzhuan: '轮转',
                 SG_lunzhuan_info: '当你受到伤害后,若你的体力值为1,你将手牌数调整至体力上限',
                 SG_lingyu: '灵愈',
@@ -5850,13 +5856,13 @@ game.import('extension', function () {
                 //——————————————————————————————————————————————————————————————————————————————————————————————————张琪瑛 群势力 3勾玉
                 SG_zhangqiyingx: '张琪瑛',
                 SG_wuxing: '五行',
-                SG_wuxing_info: '任意牌进入弃牌堆时,你根据其花色获得🃏<金>/♠️<木>/♣️<水>/♥️<火>/♦️<土>标记<br>游戏开始时,你获得四种标记.你可以弃置一枚标记,发动对应效果<br>当你首次失去所有标记时,减1点体力上限获得2点护甲,获得技能<箓生>并修改<真仪>',
+                SG_wuxing_info: '任意牌进入弃牌堆时,你根据其花色获得🃏<金>/♠️️<木>/♣️️<水>/♥️️<火>/♦️️<土>标记<br>游戏开始时,你获得四种标记.你可以弃置一枚标记,发动对应效果<br>当你首次失去所有标记时,减1点体力上限获得2点护甲,获得技能<箓生>并修改<真仪>',
                 SG_wuxing_none: '金',
                 SG_wuxing_none_info: '一名角色从正面翻至背面时,取消之',
                 SG_wuxing_spade: '木',
                 SG_wuxing_spade_info: '判定牌生效前,将牌堆顶一张牌替换为判定牌,摸一张牌',
                 SG_wuxing_club: '水',
-                SG_wuxing_club_info: '回合限一次,令一名角色回复1点体力,获得弃牌堆中一张♣️牌',
+                SG_wuxing_club_info: '回合限一次,令一名角色回复1点体力,获得弃牌堆中一张♣️️牌',
                 SG_wuxing_heart: '火',
                 SG_wuxing_heart_info: '当你使用伤害牌时,此牌伤害+1,若目标体力值大于2且其装备区有装备,其弃置一张装备牌',
                 SG_wuxing_diamond: '土',
@@ -5952,7 +5958,7 @@ game.import('extension', function () {
                 //——————————————————————————————————————————————————————————————————————————————————————————————————谋华佗
                 SG_huatuo: '谋华佗',
                 SG_qingnang: '青囊',
-                SG_qingnang_info: '出牌阶段限两次,你可弃置一张牌令一名角色将手牌补至体力上限.目标角色可以展示一张♣️牌,然后你获得1个「药引」<br>你可以移除2个「药引」,使目标下次受到伤害时,转移给其攻击范围内另一角色',
+                SG_qingnang_info: '出牌阶段限两次,你可弃置一张牌令一名角色将手牌补至体力上限.目标角色可以展示一张♣️️牌,然后你获得1个「药引」<br>你可以移除2个「药引」,使目标下次受到伤害时,转移给其攻击范围内另一角色',
                 SG_mafei: '麻沸',
                 SG_mafei_info: '当其他角色进入濒死时,你可展示所有手牌:<br>若包含三种花色:其回复至1体力,你将手牌数调整至与当前「药引」数相同<br>若不包含三种花色:其死亡时你获得其技能并重置「青囊」使用次数(每局游戏限一次)',
                 SG_baicao: '百草',
@@ -5964,13 +5970,13 @@ game.import('extension', function () {
                 //——————————————————————————————————————————————————————————————————————————————————————————————————靈氏
                 SG_lingshi: '靈氏',
                 SG_momo: '漠漠',
-                SG_momo_info: '锁定技,每当有角色判定后,若为♥️,你回复 1 点体力;若为♠️,你失去 1 点体力;若为♦️,你摸两张牌;若为♣️,你弃两张牌',
+                SG_momo_info: '锁定技,每当有角色判定后,若为♥️️,你回复 1 点体力;若为♠️️,你失去 1 点体力;若为♦️️,你摸两张牌;若为♣️️,你弃两张牌',
                 SG_qianchu: '谴黜',
                 SG_qianchu_info: '其他角色的出牌阶段开始时,其可令你进行一次判定并获得判定牌,然后其选择一项你的本回合效果:1.移出游戏;2.无法使用或打出与判定牌同花色的牌',
                 //——————————————————————————————————————————————————————————————————————————————————————————————————紫丞
                 SG_zicheng: '紫丞',
                 SG_moce: '魔策',
-                SG_moce_info: '每阶段每种花色限一次,你可以将♠️牌当【固若金汤】;♥️牌当【桃园结义】;♣️牌当【南蛮入侵】;♦️牌当【万箭齐发】使用,然后获得一枚<魔印>',
+                SG_moce_info: '每阶段每种花色限一次,你可以将♠️️牌当【固若金汤】;♥️️牌当【桃园结义】;♣️️牌当【南蛮入侵】;♦️️牌当【万箭齐发】使用,然后获得一枚<魔印>',
                 SG_wanghun: '王魂',
                 SG_wanghun_info: '觉醒技,准备阶段若<魔印>≥3,你加1体力上限并永久获得:其他角色使用锦囊牌时,你可弃一枚<魔印>令其重铸该牌;你使用锦囊牌可额外指定X名目标(X为你已损失体力值)',
                 //——————————————————————————————————————————————————————————————————————————————————————————————————康僧会
@@ -5978,7 +5984,7 @@ game.import('extension', function () {
                 SG_yijing: '译经',
                 SG_yijing_info: '回合限一次,你可以弃置一张手牌并选择一名角色,令其从牌堆顶亮出两张牌,获得其中一张非基本牌,其余牌置于牌堆底',
                 SG_fahu: '法护',
-                SG_fahu_info: '你可以将♥️牌当【净莲梵音】,♠️牌当【无懈可击】使用',
+                SG_fahu_info: '你可以将♥️️牌当【净莲梵音】,♠️️牌当【无懈可击】使用',
                 //——————————————————————————————————————————————————————————————————————————————————————————————————谋·张琪瑛
                 SG_zhangqiying: '谋·张琪瑛',
                 SG_tianshi: '天师',
@@ -6102,7 +6108,7 @@ game.import('extension', function () {
                 SG_choudao_info: '使用黑色【杀】对任意角色造成伤害后,可视为对另一名其他角色使用【杀】(无视距离),然后这些角色获得<仇>标记',
                 //——————————————————————————————————————————————————————————————————————————————————————————————————八阵图
                 SG_bazhen: '八阵图',
-                SG_bazhen_info: '出牌阶段对自己使用,判定阶段进行判定,♥️,回复1点体力;♠️,失去1点体力;♦️,摸两张牌;♣️,弃置两张牌.然后置入下家判定区,此牌再次进入你的判定区时弃置之',
+                SG_bazhen_info: '出牌阶段对自己使用,判定阶段进行判定,♥️️,回复1点体力;♠️️,失去1点体力;♦️️,摸两张牌;♣️️,弃置两张牌.然后置入下家判定区,此牌再次进入你的判定区时弃置之',
                 //——————————————————————————————————————————————————————————————————————————————————————————————————百辟刀
                 SG_baipi: '百辟刀',
                 SG_baipi_info: '你使用的黑色【杀】可移除1点护甲(若有)令伤害+1;当你失去此装备时,可弃置一名其他角色一张装备牌',
@@ -6168,7 +6174,7 @@ game.import('extension', function () {
                 SG_longhun_info: '若你使用的【杀】为此阶段使用的第一张牌,你可为其额外指定一个目标,且第一个目标需要使用两张【闪】抵消<br>若你装备区有【玄天护心镜】你使用的【杀】无视目标防具',
                 //——————————————————————————————————————————————————————————————————————————————————————————————————玄天护心镜
                 SG_xuantian: '玄天护心镜',
-                SG_xuantian_info: '装备后,你获得2点护甲<br>当你濒死时,可以弃置此装备将体力回复至1<br>受伤害时,你可进行判定,若为♥️,将此伤害反弹<br>此牌离开你的装备区后,你弃置装备区和判定区内所有牌',
+                SG_xuantian_info: '装备后,你获得2点护甲<br>当你濒死时,可以弃置此装备将体力回复至1<br>受伤害时,你可进行判定,若为♥️️,将此伤害反弹<br>此牌离开你的装备区后,你弃置装备区和判定区内所有牌',
                 //——————————————————————————————————————————————————————————————————————————————————————————————————赤焰追风驹
                 SG_chiyan: '赤焰追风驹',
                 SG_chiyan_info: '造成火属性伤害时,伤害+1',
@@ -6587,7 +6593,7 @@ game.import('extension', function () {
                     },
                 },
                 // 八阵图
-                // 出牌阶段对自己使用,判定阶段进行判定,♥️,回复1点体力;♠️,失去1点体力;♦️,摸两张牌;♣️,弃置两张牌.然后置入下家判定区,此牌再次进入你的判定区时弃置之
+                // 出牌阶段对自己使用,判定阶段进行判定,♥️️,回复1点体力;♠️️,失去1点体力;♦️️,摸两张牌;♣️️,弃置两张牌.然后置入下家判定区,此牌再次进入你的判定区时弃置之
                 SG_bazhen: {
                     type: 'delay',
                     filterTarget(card, player, target) {
@@ -6712,7 +6718,7 @@ game.import('extension', function () {
                 // 【玄天护心镜】
                 // 装备后,你获得2点护甲
                 // 当你濒死时,可以弃置此装备将体力回复至1
-                // 受伤害时,你可进行判定,若为♥️,将此伤害反弹
+                // 受伤害时,你可进行判定,若为♥️️,将此伤害反弹
                 // 此牌离开你的装备区后,你弃置装备区和判定区内所有牌
                 SG_xuantian: {
                     onEquip() {
@@ -6969,11 +6975,11 @@ game.import('extension', function () {
         },
         config: {
             群聊: {
-                name: '<a href="https://qm.qq.com/q/SsTlU9gc24"><span class="Qmenu">【温柔一刀】群聊: 771901025</span></a>',
+                name: '<a href="https://qm.qq.com/q/SsTlU9gc24"><span class=Qmenu>【温柔一刀】群聊: 771901025</span></a>',
                 clear: true,
             },
             死亡移除: {
-                name: '<span class="Qmenu">死亡移除</span>',
+                name: '<span class=Qmenu>死亡移除</span>',
                 intro: '死亡后移出游戏',
                 init: true,
             },
