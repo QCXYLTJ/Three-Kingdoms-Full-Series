@@ -75,7 +75,20 @@ game.import('extension', function () {
                 }
             }
         },
-        content() { },
+        content() {
+            if (lib.config.extension_三国全系列_文字闪烁) {
+                const style = document.createElement('style');
+                style.innerHTML = '@keyframes QQQ{';
+                for (var i = 1; i <= 20; i++) {
+                    let rand1 = Math.floor(Math.random() * 255),
+                        rand2 = Math.floor(Math.random() * 255),
+                        rand3 = Math.floor(Math.random() * 255);
+                    style.innerHTML += i * 5 + `%{text-shadow: black 0 0 1px,rgba(${rand1}, ${rand2}, ${rand3}, 0.6) 0 0 2px,rgba(${rand1}, ${rand2}, ${rand3}, 0.6) 0 0 5px,rgba(${rand1}, ${rand2}, ${rand3}, 0.6) 0 0 10px,rgba(${rand1}, ${rand2}, ${rand3}, 0.6) 0 0 10px,rgba(${rand1}, ${rand2}, ${rand3}, 0.6) 0 0 20px,rgba(${rand1}, ${rand2}, ${rand3}, 0.6) 0 0 20px}`;
+                }
+                style.innerHTML += '}';
+                document.head.appendChild(style);
+            }
+        },
         precontent() {
             game.addGroup('佛', `<img src=extension/三国全系列/image/SG_fo.png width="30"height="30">`, '佛', {
                 color: 'rgb(233, 200, 12)',
@@ -661,11 +674,22 @@ game.import('extension', function () {
                 }
                 return skills;
             }; //获取武将的武将牌上技能函数
+            lib.element.player.SG_hujia = function (num) {
+                const player = this;
+                if (!num) {
+                    num = 1;
+                }
+                player.hujia += num;
+                if (player.hujia > 5) {
+                    player.hujia = 5;
+                }
+                return player;
+            };
             game.wuxing = function (player, event) {
                 player.storage[event.name] = false;
                 if (!player.storage.SG_wuxing && lib.suits.every((suit) => !player.storage[`SG_wuxing_${suit}`])) {
                     player.loseMaxHp();
-                    player.hujia += 2;
+                    player.SG_hujia(2);
                     player.addSkill('SG_lusheng');
                     player.storage.SG_wuxing = true;
                 }
@@ -747,7 +771,9 @@ game.import('extension', function () {
                 SG_shuguobaifu: {
                     sex: 'male',
                     skills: ['SG_haoling', 'SG_tiebi'],
-                    hujia: 2,
+                    maxHp: 3,
+                    hp: 3,
+                    hujia: 4,
                     group: 'shu',
                 },
                 SG_haitang: {
@@ -936,10 +962,7 @@ game.import('extension', function () {
                             player.storage.SG_shoufa++;
                             if (player.storage.SG_shoufa > 3) {
                                 player.storage.SG_shoufa = 0;
-                                player.hujia++;
-                                if (player.hujia > 5) {
-                                    player.hujia = 5;
-                                }
+                                player.SG_hujia();
                             }
                             const list = ['豹', '鹰', '熊', '兔'];
                             const control = list.randomGet();
@@ -1021,7 +1044,8 @@ game.import('extension', function () {
                         },
                     },
                 },
-                //御象:锁定技,你计算与其他角色的距离-1;其他角色计算与你的距离+2;你受到火焰伤害始终为3,当你受无属性伤害时,此伤害-1;当你因火焰伤害而进入濒死时,你须额外使用一张【桃】
+                // 御象
+                // 你计算与其他角色的距离-1;其他角色计算与你的距离+2;你受到火焰伤害始终为3,当你受无属性伤害时,此伤害-1;当你因火焰伤害而进入濒死时,你须额外使用一张【桃】
                 SG_yuxiang: {
                     mod: {
                         globalFrom(from, to, current) {
@@ -1064,7 +1088,7 @@ game.import('extension', function () {
                 },
                 //——————————————————————————————————————————————————————————————————————————————————————————————————朵思大王群4勾玉5上限
                 //恶泉
-                //锁定技,于你的回合内,当你对其他角色造成伤害时,若其已受伤,其获得等同于伤害值的<毒>标记;当你受到伤害时,若伤害来源已受伤,其获得等同于伤害值的<毒>标记.准备阶段,所有有<毒>的角色各失去X点体力(X为其的<毒>数),然后弃其<毒>标记.若因此进入濒死状态的角色,其所有技能失效直至回合结束,且其本回合内不能使用或打出【闪】
+                //于你的回合内,当你对其他角色造成伤害时,若其已受伤,其获得等同于伤害值的<毒>标记;当你受到伤害时,若伤害来源已受伤,其获得等同于伤害值的<毒>标记.准备阶段,所有有<毒>的角色各失去X点体力(X为其的<毒>数),然后弃其<毒>标记.若因此进入濒死状态的角色,其所有技能失效直至回合结束,且其本回合内不能使用或打出【闪】
                 SG_equan: {
                     trigger: {
                         source: ['damageBefore'],
@@ -1124,40 +1148,23 @@ game.import('extension', function () {
                                 return event.getParent('SG_equan_2').name;
                             },
                             async content(event, trigger, player) {
-                                trigger.player.addTempSkill('SG_equan_4', { player: 'phaseAfter' });
-                            },
-                        },
-                        4: {
-                            mod: {
-                                cardEnabled2(card, player) {
-                                    if (card.name == 'shan') return false;
-                                },
-                            },
-                            init(player) {
-                                if (!player.storage.skill_blocker) {
-                                    player.storage.skill_blocker = [];
+                                if (!trigger.player.storage.skill_blocker) {
+                                    trigger.player.storage.skill_blocker = [];
                                 }
-                                player.storage.skill_blocker.add('SG_equan_4');
+                                trigger.player.storage.skill_blocker.add('SG_equan');
+                                trigger.player.when({ player: 'phaseAfter' })
+                                    .then(() => {
+                                        player.storage.skill_blocker?.remove('SG_equan');
+                                    });
                             },
-                            onremove(player) {
-                                if (player.storage.skill_blocker) {
-                                    player.storage.skill_blocker.remove('SG_equan_4');
-                                }
-                            },
-                            skillBlocker(skill) {
-                                return skill != 'SG_equan_4';
-                            },
-                            mark: true,
-                            intro: {
-                                content(storage, player) {
-                                    return '<li>恶泉:本回合所有技能失效能且无法使用或打出手牌';
-                                },
+                            skillBlocker(skill, player) {
+                                return true;
                             },
                         },
                     },
                 },
                 //蛮汲
-                //锁定技,当其他角色失去体力后:
+                //当其他角色失去体力后:
                 //若你的体力值不大于其,你回复1点体力,并可选择一名其他角色,令其下回合内不能使用或打出牌;
                 //若你的体力值不小于其,你摸一张牌,并可观看牌堆顶的一张牌,选择加入手牌,或置于牌堆底.
                 //回合限一次,你可以将一张牌交给一名其他角色,若如此做,直到回合结束时,该角色不能被选择为【恶泉】的目标
@@ -1239,7 +1246,7 @@ game.import('extension', function () {
                 //莲华:回合限一次,你可弃置一张牌并执行:
                 //①令一名角色回复1点体力,并为其添加1层「莲印」;
                 //②若其有「莲印」,改为回复2点体力,且你摸一张牌.
-                //锁定技,拥有「莲印」的角色回合结束时,若其体力为满,你获得1层<莲心>(上限3).
+                //拥有「莲印」的角色回合结束时,若其体力为满,你获得1层<莲心>(上限3).
                 SG_lianhua: {
                     enable: 'phaseUse',
                     usable: 1,
@@ -1312,7 +1319,7 @@ game.import('extension', function () {
                 //慈佑:当一名角色受到伤害时,若你有<莲心>,可弃1层<莲心>并选择:
                 //①防止此伤害,改为你失去1点体力;
                 //②令伤害来源弃置一张牌,且此伤害-1.
-                //锁定技,你每以此法失去体力,随机将一张【桃】或【无中生有】置于牌堆顶.
+                //你每以此法失去体力,随机将一张【桃】或【无中生有】置于牌堆顶.
                 SG_ciyou: {
                     trigger: {
                         global: ['damageBefore'],
@@ -1582,7 +1589,7 @@ game.import('extension', function () {
                 },
                 //——————————————————————————————————————————————————————————————————————————————————————————————————蜜儿(UR级)势力:群/体力:2/护甲:1/
                 // 普通形态(2体力)
-                // 共生:锁定技,回合外每受到1点伤害获得1层<灵契>(上限5);你每有1层<灵契>,其他角色与你的距离+1.你使用【闪】时,可以视为对来源使用一张【杀】
+                // 共生:回合外每受到1点伤害获得1层<灵契>(上限5);你每有1层<灵契>,其他角色与你的距离+1.你使用【闪】时,可以视为对来源使用一张【杀】
                 SG_gongsheng: {
                     trigger: {
                         player: ['damageEnd'],
@@ -1727,7 +1734,7 @@ game.import('extension', function () {
                         player.addSkill('SG_guixu');
                     },
                 }, //10
-                // 天麟:锁定技,你视为装备【麒麟弓】+【的卢】,且使用【杀】无视防具;你每造成1点伤害,随机执行一项:获得伤害来源一张牌;弃置其1张装备;令其本回合不能使用【闪】
+                // 天麟:你视为装备【麒麟弓】+【的卢】,且使用【杀】无视防具;你每造成1点伤害,随机执行一项:获得伤害来源一张牌;弃置其1张装备;令其本回合不能使用【闪】
                 SG_tianlin: {
                     mod: {
                         attackRangeBase(player) {
@@ -1828,7 +1835,7 @@ game.import('extension', function () {
                 }, //20
                 //——————————————————————————————————————————————————————————————————————————————————————————————————沈嫣(UR级)/势力:群/体力:3(普通形态)/5(入魔形态)
                 // 普通形态·灵枢素心(3体力)
-                // 灵缚:锁定技,你每发动一次「灵缚」,获得1层<业力>.回合限一次,你可以选择一名角色并依次执行:
+                // 灵缚:你每发动一次「灵缚」,获得1层<业力>.回合限一次,你可以选择一名角色并依次执行:
                 // ①封界:将其一张手牌称为<封>置于其武将牌上,其使用与<封>同类型的牌时,需弃置一张牌;
                 // ②归溯:弃置其区域内一张牌,若为装备,你获得之并令其本回合不能使用此装备类型的牌
                 SG_lingfu: {
@@ -1948,7 +1955,7 @@ game.import('extension', function () {
                         player.addSkill('SG_chiyuan');
                     },
                 }, //10
-                // 魔噬:锁定技,你使用【杀】无视防具且伤害+1;你每造成1点伤害,获得1层<魔煞>.锁定技,结束阶段,你失去X点体力(X为<魔煞>数),并弃置等量牌
+                // 魔噬:你使用【杀】无视防具且伤害+1;你每造成1点伤害,获得1层<魔煞>.结束阶段,你失去X点体力(X为<魔煞>数),并弃置等量牌
                 SG_moshi: {
                     trigger: {
                         player: ['shaBegin'],
@@ -2062,8 +2069,8 @@ game.import('extension', function () {
                     async content(event, trigger, player) {
                         event.target.draw();
                         if (get.type(event.cards[0]) == 'basic') {
-                            player.hujia++;
-                            event.target.hujia++;
+                            player.SG_hujia();
+                            event.target.SG_hujia();
                         }
                     },
                     ai: {
@@ -2075,7 +2082,8 @@ game.import('extension', function () {
                     },
                 },
                 //——————————————————————————————————————————————————————————————————————————————————————————————————A级:蜀国士兵体力(体力3/3,护甲1)
-                // 戍卫(锁定技):你的【杀】被【闪】抵消后,可令攻击范围内另一名角色成为目标
+                // 戍卫
+                // 你的【杀】被【闪】抵消后,可令攻击范围内另一名角色成为目标
                 SG_shuwei: {
                     trigger: {
                         player: ['shaMiss'],
@@ -2114,7 +2122,8 @@ game.import('extension', function () {
                     },
                 },
                 //——————————————————————————————————————————————————————————————————————————————————————————————————S级:蜀国百夫长 (体力3/3,护甲2)
-                // 号令:回合限一次,弃1装备牌,令所有手牌数≤你的角色视为使用一张【杀】(无视距离)
+                // 号令
+                // 出牌阶段限一次,你可以弃置一张装备牌,然后令所有同势力的角色对你使用一张【杀】,若你因此受伤后,你摸两张牌
                 SG_haoling: {
                     enable: 'phaseUse',
                     usable: 1,
@@ -2124,18 +2133,20 @@ game.import('extension', function () {
                     selectCard: 1,
                     position: 'he',
                     async content(event, trigger, player) {
-                        for (const npc of game.players.filter((q) => q.countCards('h') <= player.countCards('h'))) {
-                            await npc.chooseUseTarget({ name: 'sha' }, true, false, 'nodistance');
+                        for (const npc of game.players.filter((q) => q.group == player.group)) {
+                            const sha = npc.useCard({ name: 'sha' }, player, false);
+                            await sha;
+                            const his = player.actionHistory;
+                            const evt = his[his.length - 1];
+                            if (evt.damage.some((e) => e.getParent((x) => x == sha))) {
+                                player.draw(2);
+                            }
                         }
                     },
                     ai: {
                         order: 10,
                         result: {
-                            player(player, target, card) {
-                                const friends = player.getFriends(true).filter((q) => q.countCards('h') <= player.countCards('h'));
-                                const enemys = player.getEnemies().filter((q) => q.countCards('h') <= player.countCards('h'));
-                                return friends.length - enemys.length;
-                            },
+                            player: 1,
                         },
                     },
                 },
@@ -2156,7 +2167,7 @@ game.import('extension', function () {
                                 result: { targets },
                             } = await player.chooseTarget('令一名同势力其他角色获得1点护甲', (c, p, t) => t.group == p.group && t != p).set('ai', (t) => get.attitude(player, t));
                             if (targets && targets[0]) {
-                                targets[0].hujia++;
+                                targets[0].SG_hujia();
                             }
                         }
                     },
@@ -2238,7 +2249,7 @@ game.import('extension', function () {
                                 return event.player.storage.SG_wuji;
                             },
                             async content(event, trigger, player) {
-                                player.hujia++;
+                                player.SG_hujia();
                                 trigger.player.draw();
                             },
                         },
@@ -2482,7 +2493,7 @@ game.import('extension', function () {
                         },
                     },
                 }, //30
-                // 隐刃:锁定技,你使用的黑色【杀】无视防具且不可被【闪】响应;若目标有<仇>标记,此【杀】伤害+1;每轮开始时,将<连环仇刀>置入你的装备区
+                // 隐刃:你使用的黑色【杀】无视防具且不可被【闪】响应;若目标有<仇>标记,此【杀】伤害+1;每轮开始时,将<连环仇刀>置入你的装备区
                 SG_yinren: {
                     audio: 'ext:三国全系列/audio:1',
                     trigger: {
@@ -2722,7 +2733,7 @@ game.import('extension', function () {
                             },
                             forced: true,
                             async content(event, trigger, player) {
-                                player.hujia += trigger.num;
+                                player.SG_hujia(trigger.num);
                             },
                         },
                     },
@@ -2895,7 +2906,7 @@ game.import('extension', function () {
                         trigger.directHit = game.players;
                     },
                 }, //10
-                //锁定技,你免疫「毒」属性伤害;每回合首次受到伤害时,若伤害≥2,获得1点护甲;当你受到火焰伤害时,弃置此牌并防止之
+                //你免疫「毒」属性伤害;每回合首次受到伤害时,若伤害≥2,获得1点护甲;当你受到火焰伤害时,弃置此牌并防止之
                 SG_xuanbing: {
                     trigger: {
                         player: ['damageBefore'],
@@ -2915,11 +2926,11 @@ game.import('extension', function () {
                         const his = player.actionHistory;
                         const evt = his[his.length - 1];
                         if (trigger.num > 1 && !evt.damage.length) {
-                            player.hujia++;
+                            player.SG_hujia();
                         }
                     },
                 }, //10
-                //锁定技,你使用的【杀】需额外1张【闪】抵消.若此【杀】被抵消,你获得1点护甲
+                //你使用的【杀】需额外1张【闪】抵消.若此【杀】被抵消,你获得1点护甲
                 SG_xuantie: {
                     trigger: {
                         player: 'shaBefore',
@@ -2936,7 +2947,7 @@ game.import('extension', function () {
                             },
                             forced: true,
                             async content(event, trigger, player) {
-                                player.hujia++;
+                                player.SG_hujia();
                             },
                         },
                     },
@@ -3364,7 +3375,7 @@ game.import('extension', function () {
                 //——————————————————————————————————————————————————————————————————————————————————————————————————靈氏
                 // 性别:女｜体力:3｜势力:魏
                 // 漠漠
-                // 锁定技,每当有角色判定后,若为♥️️,你回复 1 点体力;若为♠️️,你失去 1 点体力;若为♦️️,你摸两张牌;若为♣️️,你弃两张牌
+                // 每当有角色判定后,若为♥️️,你回复 1 点体力;若为♠️️,你失去 1 点体力;若为♦️️,你摸两张牌;若为♣️️,你弃两张牌
                 SG_momo: {
                     trigger: {
                         global: ['judgeEnd'],
@@ -3817,9 +3828,12 @@ game.import('extension', function () {
                 }, //60
                 // 轮回
                 // 准备阶段,你须选择一项未使用过的领域生效至下轮准备阶段:
-                // 天界:所有角色对自己使用的牌结算两次
-                // 人间:所有角色无法使用或打出锦囊牌,且跳过判定阶段
-                // 修罗:所有角色使用或打出的非基本牌均视为目标为使用者自身的【决斗】
+                // 天界
+                // 所有角色对自己使用的牌结算两次
+                // 人间
+                // 所有角色无法使用或打出锦囊牌,且跳过判定阶段
+                // 修罗
+                // 任意基本牌被使用后,当前角色失去1点体力
                 SG_lunhui: {
                     init(player) {
                         player.storage.SG_lunhui = ['SG_lunhui_1', 'SG_lunhui_2', 'SG_lunhui_3'];
@@ -3892,17 +3906,17 @@ game.import('extension', function () {
                                 trigger.cancel();
                             },
                         },
+                        // 任意基本牌被使用后,当前角色失去1点体力
                         3: {
                             trigger: {
                                 player: ['useCardBegin', 'respondBegin'],
                             },
                             forced: true,
                             filter(event, player) {
-                                return get.type(event.card) != 'basic';
+                                return get.type(event.card) == 'basic';
                             },
                             async content(event, trigger, player) {
-                                trigger.card = { name: 'juedou' };
-                                trigger.targets = [player];
+                                player.loseHp();
                             },
                         },
                     },
@@ -4130,7 +4144,7 @@ game.import('extension', function () {
                 }, //20
                 //——————————————————————————————————————————————————————————————————————————————————————————————————后土娘娘(EX02)//  势力:冥// 体力:8/9/2
                 // 地脉
-                //锁定技,回合限两次,其他角色失去装备牌时,你获得该装备并对其造成1点伤害.你的装备区牌不可失去
+                //回合限两次,其他角色失去装备牌时,你获得该装备并对其造成1点伤害.你的装备区牌不可失去
                 SG_dimai: {
                     usable: 2,
                     trigger: {
@@ -4427,7 +4441,7 @@ game.import('extension', function () {
                         if (player.isTurnedOver()) {
                             player.draw(2);
                         } else {
-                            player.hujia++;
+                            player.SG_hujia();
                         }
                     },
                 }, //10
@@ -4447,7 +4461,7 @@ game.import('extension', function () {
                     },
                 }, //10
                 // 社祭
-                // 锁定技,每当你受到1点伤害后,永久封印伤害来源的一个非锁定技,选择其1张牌展示后获得
+                // 每当你受到1点伤害后,永久封印伤害来源的一个非选择其1张牌展示后获得
                 SG_sheji: {
                     trigger: {
                         player: ['damageEnd'],
@@ -4635,7 +4649,7 @@ game.import('extension', function () {
                     },
                 }, //20
                 // 永镇
-                // 锁定技,死亡前化为「地脉核心」持续3轮,在此期间:
+                // 死亡前化为「地脉核心」持续3轮,在此期间:
                 // 所有角色无法死亡
                 // 每轮从弃牌堆回收每种花色牌各1张
                 // 结束时,对所有存活角色一共造成9点雷电伤害
@@ -4843,7 +4857,7 @@ game.import('extension', function () {
                     },
                 }, //10
                 // 吞灵
-                // 锁定技,每有一名角色死亡,你的攻击范围/使用【杀】造成的伤害永久+1
+                // 每有一名角色死亡,你的攻击范围/使用【杀】造成的伤害永久+1
                 SG_tunling: {
                     mod: {
                         attackRange(player, num) {
@@ -5434,7 +5448,7 @@ game.import('extension', function () {
                 },//10
                 //——————————————————————————————————————————————————————————————————————————————————————————————————【玄京】(体力4)
                 //‌【寒域‌】
-                // 锁定技,其他角色回合内首次对你使用牌时,需弃置一张基本牌,否则此牌无效
+                // 其他角色回合内首次对你使用牌时,需弃置一张基本牌,否则此牌无效
                 SG_hanyu: {
                     trigger: {
                         target: ['useCardToPlayer'],
@@ -5530,7 +5544,7 @@ game.import('extension', function () {
                 },//30
                 //——————————————————————————————————————————————————————————————————————————————————————————————————【魔化玄京】‌(体力5)
                 //【魔焰】
-                // 锁定技,你造成的火焰伤害+1;你使用【杀】时可额外指定至多2名目标
+                // 你造成的火焰伤害+1;你使用【杀】时可额外指定至多2名目标
                 SG_moyan: {
                     mod: {
                         selectTarget(card, player, range) {
@@ -5682,14 +5696,20 @@ game.import('extension', function () {
                     },
                     forced: true,
                     filter(event, player) {
-                        return event.player.GAS().some((s) => !player.hasSkill(s)) && player.storage.SG_suming > 0;
+                        return event.player.GAS().some((s) => {
+                            const info = lib.skill[s];
+                            return !player.hasSkill(s) && info && !info.limited;
+                        }) && player.storage.SG_suming > 0;
                     },
                     async content(event, trigger, player) {
                         player.storage.SG_suming--;
                         if (trigger.player.sex == 'female') {
                             player.draw();
                         }
-                        const skills = trigger.player.GAS().filter((s) => !player.hasSkill(s));
+                        const skills = trigger.player.GAS().filter((s) => {
+                            const info = lib.skill[s];
+                            return !player.hasSkill(s) && info && !info.limited;
+                        });
                         const {
                             result: { links },
                         } = await player.chooseButton(['获得其一个技能', [skills.map((i) => [i, get.translation(i)]), 'tdnodes']])
@@ -5700,15 +5720,12 @@ game.import('extension', function () {
                     },
                 },//20
                 // 【轮转】
-                // 当你受到伤害后,若你的体力值为1,你将手牌数调整至体力上限
+                // 当你进入/脱离濒死时,将手牌调整至体力上限
                 SG_lunzhuan: {
                     trigger: {
-                        player: ['damageEnd'],
+                        player: ['dyingBefore', 'dyingAfter'],
                     },
                     forced: true,
-                    filter(event, player) {
-                        return player.hp == 1;
-                    },
                     async content(event, trigger, player) {
                         const num1 = player.countCards('h');
                         const num2 = player.maxHp;
@@ -5722,7 +5739,7 @@ game.import('extension', function () {
                     },
                 },//10
                 // 【灵愈】
-                // 回合结束时,你可选择一至两项:<br>①令一名角色回复1点体力,若其体力已满,你摸一张牌<br>②获得一点护甲<br>若你选择两项,则跳过下个出牌阶段
+                // 回合结束时,你可令一名角色执行一至两项:<br>①回复1点体力,若其体力已满,你摸一张牌<br>②获得一点护甲<br>若执行两项,则你跳过下个出牌阶段
                 SG_lingyu: {
                     trigger: {
                         player: ['phaseEnd'],
@@ -5730,85 +5747,46 @@ game.import('extension', function () {
                     forced: true,
                     async content(event, trigger, player) {
                         const {
-                            result: { links },
-                        } = await player.chooseButton(['请选择一至两项,若选择两项则跳过下个出牌阶段', [['令一名角色回复1点体力', '获得一点护甲'], 'tdnodes']], [1, 2], true)
-                            .set('ai', (b) => {
-                                if (ui.selected.buttons.length) {
-                                    return -1;
-                                }
-                                if (b.link == '令一名角色回复1点体力') {
-                                    return player.getFriends(true).filter((q) => q.hp < q.maxHp).length;
-                                }
-                                return 0.8;
-                            });
-                        if (links && links[0]) {
-                            if (links.length > 1) {
-                                player.skip('phaseUse');
+                            result: { targets },
+                        } = await player.chooseTarget('令一名角色执行一至两项')
+                            .set('ai', (t) => get.attitude(player, t));
+                        if (targets && targets[0]) {
+                            const list = ['获得一点护甲'];
+                            if (targets[0].hp < targets[0].maxHp) {
+                                list.push('回复1点体力');
                             }
-                            for (const i of links) {
-                                if (i == '令一名角色回复1点体力') {
-                                    const {
-                                        result: { targets },
-                                    } = await player.chooseTarget('令一名角色回复1点体力', (c, p, t) => p.hp < p.maxHp)
-                                        .set('ai', (t) => get.attitude(player, t));
-                                    if (targets && targets[0]) {
+                            const {
+                                result: { links },
+                            } = await player.chooseButton(['请选择一至两项,若选择两项则跳过下个出牌阶段', [list, 'tdnodes']], [1, 2], true)
+                                .set('ai', (b) => {
+                                    if (ui.selected.buttons.length) {
+                                        return -1;
+                                    }
+                                    if (b.link == '回复1点体力') {
+                                        return player.getFriends(true).filter((q) => q.hp < q.maxHp).length;
+                                    }
+                                    return 0.8;
+                                });
+                            if (links && links[0]) {
+                                if (links.length > 1) {
+                                    player.skip('phaseUse');
+                                }
+                                for (const i of links) {
+                                    if (i == '回复1点体力') {
                                         await targets[0].recover();
                                         if (targets[0].hp >= targets[0].maxHp) {
                                             player.draw();
                                         }
                                     }
-                                }
-                                else {
-                                    player.hujia++;
+                                    else {
+                                        targets[0].SG_hujia();
+                                    }
                                 }
                             }
                         }
                     },
                 },//20
             }; //70
-            for (const i in skill) {
-                const info = skill[i];
-                info.nobracket = true;
-                if (!info.audio) {
-                    info.audio = 'ext:三国全系列/audio:2';
-                }
-                if (info.subSkill) {
-                    for (const x in info.subSkill) {
-                        const infox = info.subSkill[x];
-                        if (!infox.audio) {
-                            infox.audio = 'ext:三国全系列/audio:2';
-                        } //如果是choosebutton,语音应该是xxx_backup
-                    }
-                }
-            } //QQQ
-            Object.assign(lib.skill, skill);
-            const dynamicTranslate = {
-                SG_wuxing_none(player) {
-                    if (player.storage.SG_wuxing) {
-                        return `一名角色翻面时,取消之`;
-                    }
-                    return `一名角色从正面翻至背面时,取消之`;
-                },
-                SG_wuxing_spade(player) {
-                    if (player.storage.SG_wuxing) {
-                        return `判定牌生效前,观看牌堆顶两张牌选择一张替换,获得另一张`;
-                    }
-                    return `判定牌生效前,将牌堆顶一张牌替换为判定牌,摸一张牌`;
-                },
-                SG_wuxing_club(player) {
-                    if (player.storage.SG_wuxing) {
-                        return `回合限一次,令一名角色回复1点体力,获得弃牌堆中一张♣️️牌,若目标处于濒死,此效果回复量+1`;
-                    }
-                    return `回合限一次,令一名角色回复1点体力,获得弃牌堆中一张♣️️牌`;
-                },
-                SG_wuxing_diamond(player) {
-                    if (player.storage.SG_wuxing) {
-                        return `当你受到伤害后,选择一项<br>①令伤害来源弃置你装备区牌数张与你装备区颜色相同的牌,若其没有,随机废除其装备栏<br>②从牌堆中随机获得一张伤害牌`;
-                    }
-                    return `当你受到伤害后,选择一项<br>①令伤害来源弃置一张与你装备区颜色相同的牌,若其没有,随机废除其装备栏<br>②从牌堆中随机获得一张伤害牌`;
-                },
-            };
-            Object.assign(lib.dynamicTranslate, dynamicTranslate);
             const translate = {
                 //——————————————————————————————————————————————————————————————————————————————————————————————————
                 SG_: '',
@@ -5830,9 +5808,9 @@ game.import('extension', function () {
                 SG_suming: '宿命',
                 SG_suming_info: '本局限三次,当一名角色死亡时,你可以获得其一个技能.若其是女性,你摸一张牌',
                 SG_lunzhuan: '轮转',
-                SG_lunzhuan_info: '当你受到伤害后,若你的体力值为1,你将手牌数调整至体力上限',
+                SG_lunzhuan_info: '当你进入/脱离濒死时,将手牌调整至体力上限',
                 SG_lingyu: '灵愈',
-                SG_lingyu_info: '回合结束时,你可选择一至两项:<br>①令一名角色回复1点体力,若其体力已满,你摸一张牌<br>②获得一点护甲<br>若你选择两项,则跳过下个出牌阶段',
+                SG_lingyu_info: '回合结束时,你可令一名角色执行一至两项:<br>①回复1点体力,若其体力已满,你摸一张牌<br>②获得一点护甲<br>若执行两项,则你跳过下个出牌阶段',
                 //——————————————————————————————————————————————————————————————————————————————————————————————————兰晹(群,体力4)
                 SG_lanyang: '兰晹',
                 SG_huanyue: '幻月',
@@ -5844,13 +5822,13 @@ game.import('extension', function () {
                 //——————————————————————————————————————————————————————————————————————————————————————————————————【玄京】(体力4)
                 SG_xuanjing: '玄京',
                 SG_hanyu: '寒域',
-                SG_hanyu_info: '锁定技,其他角色回合内首次对你使用牌时,需弃置一张基本牌,否则此牌无效',
+                SG_hanyu_info: '其他角色回合内首次对你使用牌时,需弃置一张基本牌,否则此牌无效',
                 SG_xuanhuo: '玄火',
                 SG_xuanhuo_info: '回合限一次,你可将一张牌当【火杀】使用<br>你使用的【火杀】无视防具且伤害+1,且若目标有「幻月」标记,则强制命中<br>累计造成3点火焰伤害后,你变身为【魔化玄京】',
                 //——————————————————————————————————————————————————————————————————————————————————————————————————【魔化玄京】‌(体力5)
                 SG_xuanjing1: '魔化玄京',
                 SG_moyan: '魔焰',
-                SG_moyan_info: '锁定技,你造成的火焰伤害+1;你使用【杀】时可额外指定至多2名目标',
+                SG_moyan_info: '你造成的火焰伤害+1;你使用【杀】时可额外指定至多2名目标',
                 SG_zhongyan: '终焉',
                 SG_zhongyan_info: '限定技,出牌阶段弃置所有手牌,对全场角色造成2点火焰伤害并移除所有「幻月」标记,若此过程中没有角色死亡,你死亡',
                 //——————————————————————————————————————————————————————————————————————————————————————————————————张琪瑛 群势力 3勾玉
@@ -5888,7 +5866,7 @@ game.import('extension', function () {
                 SG_yinsha: '引煞',
                 SG_yinsha_info: '每轮限一次,你可以弃置两张牌,召唤1个「牛头」或「马面」.牛马杀死角色后,你回复1点体力',
                 SG_tunling: '吞灵',
-                SG_tunling_info: '锁定技,每有一名角色死亡,你的攻击范围/使用【杀】造成的伤害永久+1',
+                SG_tunling_info: '每有一名角色死亡,你的攻击范围/使用【杀】造成的伤害永久+1',
                 SG_lingyuan: '灵怨',
                 SG_lingyuan_info: '觉醒技,当你受到其他角色造成的伤害进入濒死状态时,你减1点体力上限,回复一半体力,获得技能「冥爆」',
                 SG_mingbao: '冥爆',
@@ -5902,7 +5880,7 @@ game.import('extension', function () {
                 //——————————————————————————————————————————————————————————————————————————————————————————————————后土娘娘(EX02)
                 SG_houtu: '后土娘娘',
                 SG_dimai: '地脉',
-                SG_dimai_info: '锁定技,回合限两次,其他角色失去装备牌时,你获得该装备并对其造成1点伤害.你的装备区牌不可失去',
+                SG_dimai_info: '回合限两次,其他角色失去装备牌时,你获得该装备并对其造成1点伤害.你的装备区牌不可失去',
                 SG_sishi: '四时',
                 SG_sishi_info: '轮次转换技<br>春煦:摸牌阶段额外摸3张,手牌上限+4<br>夏炎:出牌阶段【杀】次数+2,可额外指定2个目标<br>秋肃:准备阶段获得所有判定区牌,并将弃牌堆中的判定牌洗入牌堆<br>冬寂:回合限一次,你免疫体力值扣减',
                 SG_liudao: '六道',
@@ -5920,7 +5898,7 @@ game.import('extension', function () {
                 SG_diyu: '地狱',
                 SG_diyu_info: '对其他角色造成的伤害值+1',
                 SG_sheji: '社祭',
-                SG_sheji_info: '锁定技,每当你受到1点伤害后,永久封印伤害来源的一个非锁定技,选择其1张牌展示后获得',
+                SG_sheji_info: '每当你受到1点伤害后,永久封印伤害来源的一个非选择其1张牌展示后获得',
                 SG_guixux: '归墟',
                 SG_guixux_info: '限定技,出牌阶段,你可以将游戏回退至3轮前的完整状态(体力、手牌、装备),并获得全场所有被失去过的装备牌',
                 SG_youfen: '幽焚',
@@ -5928,7 +5906,7 @@ game.import('extension', function () {
                 SG_yinyang: '阴阳',
                 SG_yinyang_info: '轮次转换技<br>阳仪:你的回合外,黑色锦囊对你无效,其他角色使用红色锦囊须弃置一张同花色的牌才能生效<br>阴仪:你的回合内所有【桃】视为【酒】',
                 SG_yongzhen: '永镇',
-                SG_yongzhen_info: '锁定技,死亡前化为「地脉核心」持续3轮',
+                SG_yongzhen_info: '死亡前化为「地脉核心」持续3轮',
                 SG_dimaihexin: '地脉核心',
                 SG_dimaihexin_info: '所有角色无法死亡<br>每轮从弃牌堆回收每种花色牌各1张<br>结束时,对所有存活角色一共造成9点雷电伤害',
                 //——————————————————————————————————————————————————————————————————————————————————————————————————如来佛祖
@@ -5938,13 +5916,13 @@ game.import('extension', function () {
                 SG_yinguo: '因果',
                 SG_yinguo_info: '转换技,初始为<过去·阳><br><过去·阳><br>出牌阶段,你可观看牌堆底5张牌,以任意顺序放至牌堆顶或牌堆底<br><现在·阴><br>你本回合使用牌无次数距离限制<br><未来><br>免疫首次受到的伤害类型,持续至下回合开始',
                 SG_lunhui: '轮回',
-                SG_lunhui_info: '准备阶段,你须选择一项未使用过的领域生效至下轮准备阶段:<br>天界:所有角色对自己使用的牌结算两次<br>人间:所有角色无法使用或打出锦囊牌,且跳过判定阶段<br>修罗:所有角色使用或打出的非基本牌均视为目标为使用者自身的【决斗】',
+                SG_lunhui_info: '准备阶段,你须选择一项未使用过的领域生效至下轮准备阶段:<br>天界:所有角色对自己使用的牌结算两次<br>人间:所有角色无法使用或打出锦囊牌,且跳过判定阶段<br>修罗:任意基本牌被使用后,当前角色失去1点体力',
                 SG_lunhui_1: '天界',
                 SG_lunhui_1_info: '所有角色对自己使用的牌结算两次',
                 SG_lunhui_2: '人间',
                 SG_lunhui_2_info: '所有角色无法使用或打出锦囊牌,且跳过判定阶段',
                 SG_lunhui_3: '修罗',
-                SG_lunhui_3_info: '所有角色使用或打出的非基本牌均视为目标为使用者自身的【决斗】',
+                SG_lunhui_3_info: '任意基本牌被使用后,当前角色失去1点体力',
                 SG_wuliang: '浩瀚',
                 SG_wuliang_info: '你的手牌上限为当前体力值的2倍.弃牌阶段,改为分配需弃牌数次2点伤害',
                 SG_niepanx: '涅槃',
@@ -5970,7 +5948,7 @@ game.import('extension', function () {
                 //——————————————————————————————————————————————————————————————————————————————————————————————————靈氏
                 SG_lingshi: '靈氏',
                 SG_momo: '漠漠',
-                SG_momo_info: '锁定技,每当有角色判定后,若为♥️️,你回复 1 点体力;若为♠️️,你失去 1 点体力;若为♦️️,你摸两张牌;若为♣️️,你弃两张牌',
+                SG_momo_info: '每当有角色判定后,若为♥️️,你回复 1 点体力;若为♠️️,你失去 1 点体力;若为♦️️,你摸两张牌;若为♣️️,你弃两张牌',
                 SG_qianchu: '谴黜',
                 SG_qianchu_info: '其他角色的出牌阶段开始时,其可令你进行一次判定并获得判定牌,然后其选择一项你的本回合效果:1.移出游戏;2.无法使用或打出与判定牌同花色的牌',
                 //——————————————————————————————————————————————————————————————————————————————————————————————————紫丞
@@ -5998,7 +5976,7 @@ game.import('extension', function () {
                 SG_xuechou: '血仇',
                 SG_xuechou_info: '当一名群势力角色受到伤害后,你获得1个<仇>标记;回合每项限一次,可移除2个<仇>选择一项:<br>①对一名角色造成1点伤害并弃置其一张牌;<br>②令一名群势力角色回复1点体力并摸一张牌',
                 SG_yinren: '隐刃',
-                SG_yinren_info: '锁定技,你使用的黑色【杀】无视防具且不可被【闪】响应;若目标有<仇>标记,此【杀】伤害+1;每轮开始时,将<连环仇刀>置入你的装备区;游戏开始时,将<赤潮战象>置入你的装备区',
+                SG_yinren_info: '你使用的黑色【杀】无视防具且不可被【闪】响应;若目标有<仇>标记,此【杀】伤害+1;每轮开始时,将<连环仇刀>置入你的装备区;游戏开始时,将<赤潮战象>置入你的装备区',
                 SG_shaxue: '歃血为盟',
                 SG_shaxue_info: '指定两名群势力角色,各流失1点体力,然后你获得2个<仇>标记;若有角色因此进入濒死,你可对其使用一张【桃】,然后获得1个<仇>',
                 SG_chijiang: '赤江',
@@ -6021,7 +5999,7 @@ game.import('extension', function () {
                 //——————————————————————————————————————————————————————————————————————————————————————————————————蜀国百夫长
                 SG_shuguobaifu: '蜀国百夫长',
                 SG_haoling: '号令',
-                SG_haoling_info: '回合限一次,弃1装备牌,令所有手牌数≤你的角色视为使用一张【杀】(无视距离)',
+                SG_haoling_info: '出牌阶段限一次,你可以弃置一张装备牌,然后令所有同势力的角色对你使用一张【杀】,若你因此受伤后,你摸两张牌',
                 SG_tiebi: '铁壁',
                 SG_tiebi_info: '你的护甲每损失1点,可令一名同势力其他角色获得1点护甲',
                 //——————————————————————————————————————————————————————————————————————————————————————————————————蜀国士兵
@@ -6041,25 +6019,25 @@ game.import('extension', function () {
                 //——————————————————————————————————————————————————————————————————————————————————————————————————沈嫣
                 SG_shenyan: '沈嫣',
                 SG_lingfu: '灵缚',
-                SG_lingfu_info: '锁定技,你每发动一次「灵缚」,获得1层<业力>.回合限一次,你可以选择一名其他角色并依次执行:<br>①封界:将其一张手牌称为<封>置于其武将牌上,其使用与<封>同类型的牌时,需弃置一张牌;<br>②归溯:弃置其区域内一张牌,若为装备,你获得之并令其本回合不能使用此装备类型的牌',
+                SG_lingfu_info: '你每发动一次「灵缚」,获得1层<业力>.回合限一次,你可以选择一名其他角色并依次执行:<br>①封界:将其一张手牌称为<封>置于其武将牌上,其使用与<封>同类型的牌时,需弃置一张牌;<br>②归溯:弃置其区域内一张牌,若为装备,你获得之并令其本回合不能使用此装备类型的牌',
                 SG_jinghun: '净魂',
                 SG_jinghun_info: '当一名其他角色进入濒死时,你可以移除所有<业力>,令其回复至1点体力并摸X张牌,且直到其下个回合开始,其受到的伤害-1(X为你移除的<业力>数)<br>「净魂」与「入魔」,发动其中一个技能后就会失去另一个技能',
                 SG_rumo: '入魔',
                 SG_rumo_info: '限定技,准备阶段,若<业力>≥3,你可以增加2点体力上限,回复2点体力;获得技能「魔噬」「赤渊」',
                 SG_moshi: '魔噬',
-                SG_moshi_info: '锁定技,你使用【杀】无视防具且伤害+1;你每造成1点伤害,获得1层<魔煞>.锁定技,结束阶段,你失去X点体力(X为<魔煞>数),并弃置等量牌',
+                SG_moshi_info: '你使用【杀】无视防具且伤害+1;你每造成1点伤害,获得1层<魔煞>.结束阶段,你失去X点体力(X为<魔煞>数),并弃置等量牌',
                 SG_chiyuan: '赤渊',
                 SG_chiyuan_info: '回合限一次,你可以移除3层<魔煞>,对至多三名角色各造成2点火焰伤害,并令这些角色非锁定技失效',
                 //——————————————————————————————————————————————————————————————————————————————————————————————————蜜儿
                 SG_mier: '蜜儿',
                 SG_gongsheng: '共生',
-                SG_gongsheng_info: '锁定技,回合外每受到1点伤害获得1层<灵契>(上限5);你每有1层<灵契>,其他角色与你的距离+1.你使用【闪】时,可以视为对来源使用一张【杀】',
+                SG_gongsheng_info: '回合外每受到1点伤害获得1层<灵契>(上限5);你每有1层<灵契>,其他角色与你的距离+1.你使用【闪】时,可以视为对来源使用一张【杀】',
                 SG_huanling: '唤灵',
                 SG_huanling_info: '回合限一次,你可以选择一项:<br>①愈:令一名角色回复1点体力,并代替其承受下一次伤害;<br>②召:移除1层<灵契>,从牌堆随机获得一张【坐骑】或【宝物】牌,一名角色使用此牌时,你摸一张牌',
                 SG_bianshen: '变身',
                 SG_bianshen_info: '觉醒技:准备阶段,若<灵契>≥3.增加2点体力上限并回复2点体力,失去「共生」「唤灵」;获得技能「天麟」「归墟」',
                 SG_tianlin: '天麟',
-                SG_tianlin_info: '锁定技,你视为装备【麒麟弓】+【的卢】,且使用【杀】无视防具;你每造成1点伤害,随机执行一项:获得伤害来源一张牌;弃置其1张装备;令其本回合不能使用【闪】',
+                SG_tianlin_info: '你视为装备【麒麟弓】+【的卢】,且使用【杀】无视防具;你每造成1点伤害,随机执行一项:获得伤害来源一张牌;弃置其1张装备;令其本回合不能使用【闪】',
                 SG_guixu: '归墟',
                 SG_guixu_info: '限定技,出牌阶段,你可以移除所有<灵契>,对至多X名角色造成X点雷电伤害(X为移除的<灵契>数),若此伤害导致角色死亡,你回复1点体力并重置此技能',
                 //——————————————————————————————————————————————————————————————————————————————————————————————————楚歌
@@ -6085,19 +6063,19 @@ game.import('extension', function () {
                 SG_shoufa: '兽法',
                 SG_shoufa_info: '当你每回合首次造成伤害后,你可以选择一名与你距离不大于2的角色;每回合限五次,当你受到伤害后,你可以选择一名与你距离不小于2的角色.被此技能选择的角色随机执行以下一种野兽效果:<br>豹:受到1点无来源伤害;<br>鹰:你随机获得其一张牌(若此时其手牌数不小于你,你可观看其手牌);<br>熊:你随机弃置其装备区一张牌(若此时其装备区数量为5,改为2);<br>兔:其摸一张牌<br>你每令一名角色执行过4次兽法效果后,你获得1点护甲.你回合结束时,若你本回合未发动过<兽法>,你可以选择一名其他角色,令其随机执行以上一种野兽效果',
                 SG_yuxiang: '御象',
-                SG_yuxiang_info: '锁定技,你计算与其他角色的距离-1;其他角色计算与你的距离+2;你受到火焰伤害始终为3,当你受无属性伤害时,此伤害-1;当你因火焰伤害而进入濒死时,你须额外使用一张【桃】',
+                SG_yuxiang_info: '你计算与其他角色的距离-1;其他角色计算与你的距离+2;你受到火焰伤害始终为3,当你受无属性伤害时,此伤害-1;当你因火焰伤害而进入濒死时,你须额外使用一张【桃】',
                 //——————————————————————————————————————————————————————————————————————————————————————————————————朵思大王
                 SG_duosidawang: '朵思大王',
                 SG_equan: '恶泉',
-                SG_equan_info: '锁定技,于你的回合内,当你对其他角色造成伤害时,若其已受伤,其获得等同于伤害值的<毒>标记;当你受到伤害时,若伤害来源已受伤,其获得等同于伤害值的<毒>标记.准备阶段,所有有<毒>的角色各失去X点体力(X为其的<毒>数),然后移除其<毒>标记.若有角色因此进入濒死状态,直至其回合结束,其所有技能失效且不能使用或打出【闪】',
+                SG_equan_info: '于你的回合内,当你对其他角色造成伤害时,若其已受伤,其获得等同于伤害值的<毒>标记;当你受到伤害时,若伤害来源已受伤,其获得等同于伤害值的<毒>标记.准备阶段,所有有<毒>的角色各失去X点体力(X为其的<毒>数),然后移除其<毒>标记.若有角色因此进入濒死状态,直至其回合结束,其所有技能失效且不能使用或打出【闪】',
                 SG_manji: '蛮汲',
-                SG_manji_info: '锁定技,当其他角色失去体力后:<br>若你的体力值不大于其,你回复1点体力,并可选择一名其他角色,令其下回合内不能使用或打出牌;<br>若你的体力值不小于其,你摸一张牌,并可观看牌堆顶的一张牌,选择加入手牌,或置于牌堆底.<br>回合限一次,你可以将一张牌交给一名其他角色,若如此做,直到回合结束时,该角色不能被选择为【恶泉】的目标',
+                SG_manji_info: '当其他角色失去体力后:<br>若你的体力值不大于其,你回复1点体力,并可选择一名其他角色,令其下回合内不能使用或打出牌;<br>若你的体力值不小于其,你摸一张牌,并可观看牌堆顶的一张牌,选择加入手牌,或置于牌堆底.<br>回合限一次,你可以将一张牌交给一名其他角色,若如此做,直到回合结束时,该角色不能被选择为【恶泉】的目标',
                 //——————————————————————————————————————————————————————————————————————————————————————————————————瑶甄
                 SG_yaozhen: '瑶甄',
                 SG_lianhua: '莲华',
-                SG_lianhua_info: '回合限一次,你可弃置一张牌并执行:<br>①令一名角色回复1点体力,并为其添加1层「莲印」;<br>②若其有「莲印」,改为回复2点体力,且你摸一张牌<br>锁定技,拥有「莲印」的角色回合结束时,若其体力为满,你获得1层<莲心>(上限3)',
+                SG_lianhua_info: '回合限一次,你可弃置一张牌并执行:<br>①令一名角色回复1点体力,并为其添加1层「莲印」;<br>②若其有「莲印」,改为回复2点体力,且你摸一张牌<br>拥有「莲印」的角色回合结束时,若其体力为满,你获得1层<莲心>(上限3)',
                 SG_ciyou: '慈佑',
-                SG_ciyou_info: '任意角色受到伤害时,若你有<莲心>,可移除1层<莲心>并选择:<br>①防止此伤害,改为你失去1点体力;<br>②令伤害来源弃置一张牌,且此伤害-1<br>锁定技,你每以此法失去体力,随机将一张【桃】或【无中生有】置于牌堆顶',
+                SG_ciyou_info: '任意角色受到伤害时,若你有<莲心>,可移除1层<莲心>并选择:<br>①防止此伤害,改为你失去1点体力;<br>②令伤害来源弃置一张牌,且此伤害-1<br>你每以此法失去体力,随机将一张【桃】或【无中生有】置于牌堆顶',
                 SG_niepan: '涅槃',
                 SG_niepan_info: '限定技,当你进入濒死状态时,你可回复体力至3点,清空所有负面状态(横置,翻面,废除装备区,判定牌),并永久获得:<br>「莲华」可额外指定一名目标;<br>「慈佑」可同时执行两项效果;<br>手牌上限+X(X为存活角色数)',
                 //——————————————————————————————————————————————————————————————————————————————————————————————————卡牌
@@ -6132,13 +6110,13 @@ game.import('extension', function () {
                 SG_gu_info: '出牌阶段对一名其他角色使用,令其获得「蛊毒」标记(回合结束时选择弃置一张牌或失去1点体力)',
                 //——————————————————————————————————————————————————————————————————————————————————————————————————玄铁重剑
                 SG_xuantie: '玄铁重剑',
-                SG_xuantie_info: '锁定技,你使用的【杀】需额外1张【闪】抵消.若此【杀】被抵消,你获得1点护甲',
+                SG_xuantie_info: '你使用的【杀】需额外1张【闪】抵消.若此【杀】被抵消,你获得1点护甲',
                 //——————————————————————————————————————————————————————————————————————————————————————————————————业火焚城
                 SG_yehuo: '业火焚城',
                 SG_yehuo_info: '出牌阶段对一名其他角色使用,判定阶段进行判定:若为红色:对所有角色造成1点火焰伤害;若为黑色:弃置所有装备牌并流失1点体力',
                 //——————————————————————————————————————————————————————————————————————————————————————————————————玄冰盾
                 SG_xuanbing: '玄冰盾',
-                SG_xuanbing_info: '锁定技,你免疫「毒」属性伤害;每回合首次受到伤害时,若伤害≥2,获得1点护甲;当你受到火焰伤害时,弃置此牌并防止之',
+                SG_xuanbing_info: '你免疫「毒」属性伤害;每回合首次受到伤害时,若伤害≥2,获得1点护甲;当你受到火焰伤害时,弃置此牌并防止之',
                 //——————————————————————————————————————————————————————————————————————————————————————————————————决死令
                 SG_juesi: '决死令',
                 SG_juesi_info: '对所有其他角色使用,目标角色需依次打出2张【闪】,否则失去1点体力.若吕布在场,此牌不可被无懈',
@@ -6182,6 +6160,26 @@ game.import('extension', function () {
                 SG_hanshuang: '寒霜踏雪兽',
                 SG_hanshuang_info: '受到火属性伤害时,伤害-1',
             };
+            for (const i in skill) {
+                const info = skill[i];
+                info.nobracket = true;
+                const trans = translate[`${i}_info`];
+                if (info.forced) {
+                    translate[`${i}_info`] = `<span class=Qmenu>锁定技,</span>${trans}`;
+                }
+                if (!info.audio) {
+                    info.audio = 'ext:三国全系列/audio:2';
+                }
+                if (info.subSkill) {
+                    for (const x in info.subSkill) {
+                        const infox = info.subSkill[x];
+                        if (!infox.audio) {
+                            infox.audio = 'ext:三国全系列/audio:2';
+                        } //如果是choosebutton,语音应该是xxx_backup
+                    }
+                }
+            } //QQQ
+            Object.assign(lib.skill, skill);
             Object.assign(lib.translate, translate);
             const card = {
                 // 【封魔禁咒】 锦囊牌
@@ -6304,7 +6302,7 @@ game.import('extension', function () {
                     filterTarget: true,
                     selectTarget: -1,
                     async content(event, trigger, player) {
-                        event.target.hujia++;
+                        event.target.SG_hujia();
                     },
                     ai: {
                         order: 10,
@@ -6722,7 +6720,7 @@ game.import('extension', function () {
                 // 此牌离开你的装备区后,你弃置装备区和判定区内所有牌
                 SG_xuantian: {
                     onEquip() {
-                        player.hujia += 2;
+                        player.SG_hujia(2);
                     },
                     async onLose(event, trigger, player) {
                         player.hujia -= 2;
@@ -6765,7 +6763,7 @@ game.import('extension', function () {
                     },
                 }, //10
                 // 【玄铁重剑】
-                // 锁定技,你使用的【杀】需额外1张【闪】抵消.若此【杀】被抵消,你获得1点护甲
+                // 你使用的【杀】需额外1张【闪】抵消.若此【杀】被抵消,你获得1点护甲
                 SG_xuantie: {
                     type: 'equip',
                     subtype: 'equip1',
@@ -6778,7 +6776,7 @@ game.import('extension', function () {
                     },
                 }, //10
                 // 【玄冰盾】
-                // 锁定技,你免疫「毒」属性伤害;每回合首次受到伤害时,若伤害≥2,获得1点护甲;当你受到火焰伤害时,弃置此牌并防止之
+                // 你免疫「毒」属性伤害;每回合首次受到伤害时,若伤害≥2,获得1点护甲;当你受到火焰伤害时,弃置此牌并防止之
                 SG_xuanbing: {
                     type: 'equip',
                     subtype: 'equip2',
@@ -6969,9 +6967,33 @@ game.import('extension', function () {
             lib.arenaReady.push(function () {
                 lib.connectCardPack.add('三国全系列');
             }); //扩展卡牌联机
-            game.saveConfig(`extension_三国全系列_cards_enable`, true); //扩展卡牌全部打开
-            game.saveConfig('cards', lib.config.cards);
-            game.saveConfig('defaultcards', lib.config.cards);
+            const dynamicTranslate = {
+                SG_wuxing_none(player) {
+                    if (player.storage.SG_wuxing) {
+                        return `一名角色翻面时,取消之`;
+                    }
+                    return `一名角色从正面翻至背面时,取消之`;
+                },
+                SG_wuxing_spade(player) {
+                    if (player.storage.SG_wuxing) {
+                        return `判定牌生效前,观看牌堆顶两张牌选择一张替换,获得另一张`;
+                    }
+                    return `判定牌生效前,将牌堆顶一张牌替换为判定牌,摸一张牌`;
+                },
+                SG_wuxing_club(player) {
+                    if (player.storage.SG_wuxing) {
+                        return `回合限一次,令一名角色回复1点体力,获得弃牌堆中一张♣️️牌,若目标处于濒死,此效果回复量+1`;
+                    }
+                    return `回合限一次,令一名角色回复1点体力,获得弃牌堆中一张♣️️牌`;
+                },
+                SG_wuxing_diamond(player) {
+                    if (player.storage.SG_wuxing) {
+                        return `当你受到伤害后,选择一项<br>①令伤害来源弃置你装备区牌数张与你装备区颜色相同的牌,若其没有,随机废除其装备栏<br>②从牌堆中随机获得一张伤害牌`;
+                    }
+                    return `当你受到伤害后,选择一项<br>①令伤害来源弃置一张与你装备区颜色相同的牌,若其没有,随机废除其装备栏<br>②从牌堆中随机获得一张伤害牌`;
+                },
+            };
+            Object.assign(lib.dynamicTranslate, dynamicTranslate);
         },
         config: {
             群聊: {
@@ -6981,6 +7003,11 @@ game.import('extension', function () {
             死亡移除: {
                 name: '<span class=Qmenu>死亡移除</span>',
                 intro: '死亡后移出游戏',
+                init: true,
+            },
+            文字闪烁: {
+                name: '<span class=Qmenu>文字闪烁</span>',
+                intro: '开启后,部分文字会附加闪烁动画效果',
                 init: true,
             },
         },
