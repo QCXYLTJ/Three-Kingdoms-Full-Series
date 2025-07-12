@@ -4,7 +4,7 @@ const sha = function () {
     if (lib.version.includes('β')) {
         localStorage.clear();
         if (indexedDB) {
-            indexedDB.deleteDatabase(lib.configprefix + 'data');
+            indexedDB.deleteDatabase('noname_0.9_data');
         }
         game.reload();
         throw new Error();
@@ -203,10 +203,7 @@ game.import('extension', function () {
                         });
                     }
                 }; //删除次数限制//filter决定有无次数距离限制//viewAs的技能会修改chooseToUse事件的filterCard
-                game.qcard = (player, type, filter, range) => {
-                    if (range !== false) {
-                        range = true;
-                    }
+                lib.element.player.qcard = function (type, filter, range) {
                     const list = [];
                     for (const i in lib.card) {
                         const info = lib.card[i];
@@ -223,6 +220,10 @@ game.import('extension', function () {
                             continue;
                         }
                         if (filter !== false) {
+                            const player = this;
+                            if (range !== false) {
+                                range = true;
+                            }
                             if (!player.filterCard(i, range)) {
                                 continue;
                             }
@@ -267,7 +268,7 @@ game.import('extension', function () {
                 game.sort = function () {
                     const players = game.players.filter(Boolean);
                     const deads = game.dead.filter(Boolean);
-                    const allPlayers = deads.concat(players);//先移除players后面玩家会前移,再添加入dead需要同排序取前
+                    const allPlayers = deads.concat(players); //先移除players后面玩家会前移,再添加入dead需要同排序取前
                     const bool = lib.config.dieremove;
                     const playerx = bool ? players : allPlayers;
                     ui.arena.setNumber(playerx.length);
@@ -275,14 +276,14 @@ game.import('extension', function () {
                         deads.forEach((player) => {
                             player.classList.add('removing', 'hidden');
                         });
-                    }//隐藏死亡角色
+                    } //隐藏死亡角色
                     playerx.sort((a, b) => Number(a.dataset.position) - Number(b.dataset.position));
                     if (playerx.includes(game.me) && playerx[0] != game.me) {
                         while (playerx[0] != game.me) {
                             const start = playerx.shift();
                             playerx.push(start);
                         }
-                    }//将玩家排至数组首位
+                    } //将玩家排至数组首位
                     playerx.forEach((player, index, array) => {
                         player.dataset.position = index;
                         const zhu = _status.roundStart || game.zhu || game.boss || array.find((p) => p.seatNum == 1) || array[0];
@@ -293,7 +294,7 @@ game.import('extension', function () {
                         } else {
                             player.seatNum = num;
                         }
-                    });//修改dataset.position与seatNum
+                    }); //修改dataset.position与seatNum
                     players.sort((a, b) => Number(a.dataset.position) - Number(b.dataset.position));
                     players.forEach((player, index, array) => {
                         if (bool) {
@@ -312,12 +313,12 @@ game.import('extension', function () {
                         }
                         player.previous = array[index === 0 ? array.length - 1 : index - 1];
                         player.next = array[index === array.length - 1 ? 0 : index + 1];
-                    });//展示零号位手牌/修改previous/显示元素
+                    }); //展示零号位手牌/修改previous/显示元素
                     allPlayers.sort((a, b) => Number(a.dataset.position) - Number(b.dataset.position));
                     allPlayers.forEach((player, index, array) => {
                         player.previousSeat = array[index === 0 ? array.length - 1 : index - 1];
                         player.nextSeat = array[index === array.length - 1 ? 0 : index + 1];
-                    });//修改previousSeat
+                    }); //修改previousSeat
                     game.players.sort((a, b) => Number(a.dataset.position) - Number(b.dataset.position));
                     return true;
                 };
@@ -381,15 +382,6 @@ game.import('extension', function () {
                     if (name) player.init(name);
                     game.players.push(player);
                     player.draw(Math.min(player.maxHp, 20));
-                    return player;
-                };
-                game.addFellowQ = function (name) {
-                    game.log('boss增加了随从', name);
-                    const player = game.addPlayerQ(name);
-                    player.side = true;
-                    player.identity = 'zhong';
-                    player.setIdentity('zhong');
-                    game.addVideo('setIdentity', player, 'zhong');
                     return player;
                 };
                 lib.element.player.addFellow = function (name) {
@@ -705,8 +697,7 @@ game.import('extension', function () {
                 if (src.includes('.mp4')) {
                     this.style.backgroundImage = 'none';
                     this.setBackgroundMp4(src);
-                }
-                else {
+                } else {
                     this.style.backgroundImage = `url(${src})`;
                 }
                 return this;
@@ -942,6 +933,13 @@ game.import('extension', function () {
                     hp: 3,
                     maxHp: 3,
                     group: 'wei',
+                },
+                SG_baiyuemixiang: {
+                    sex: 'female',
+                    skills: ['SG_lingyun', 'SG_huqi', 'SG_yuyin'],
+                    hp: 3,
+                    maxHp: 3,
+                    group: 'shu',
                 },
             };
             for (const i in character) {
@@ -2431,8 +2429,7 @@ game.import('extension', function () {
                                     if (trigger.name == 'die') {
                                         shibai();
                                     }
-                                }
-                                else {
+                                } else {
                                     if (trigger.name == 'damage') {
                                         player.storage.SG_tongqi_damage += trigger.num;
                                         if (player.storage.SG_tongqi_damage > 2) {
@@ -4274,11 +4271,14 @@ game.import('extension', function () {
                             },
                             forced: true,
                             async content(event, trigger, player) {
-                                //QQQ
                                 trigger.cancel();
                                 const card = trigger.cards[0];
                                 if (card) {
-                                    player.vcardsMap?.equips.push(new lib.element.VCard(card));
+                                    const vcard = new lib.element.VCard(card);
+                                    const cardSymbol = Symbol('card');
+                                    card.cardSymbol = cardSymbol;
+                                    card[cardSymbol] = vcard;
+                                    player.vcardsMap?.equips.push(vcard);
                                     player.node.equips.appendChild(card);
                                     card.style.transform = '';
                                     card.node.name2.innerHTML = `${get.translation(card.suit)}${card.number} ${get.translation(card.name)}`;
@@ -5134,8 +5134,7 @@ game.import('extension', function () {
                                         } else {
                                             player.draw(2);
                                         }
-                                    }
-                                    else {
+                                    } else {
                                         player.draw(2);
                                     }
                                 }
@@ -5677,8 +5676,7 @@ game.import('extension', function () {
                         const num = players.filter((q) => !game.players.includes(q)).length;
                         if (num > 0) {
                             player.recover(num);
-                        }
-                        else {
+                        } else {
                             player.die();
                         }
                     },
@@ -5899,8 +5897,7 @@ game.import('extension', function () {
                     async content(event, trigger, player) {
                         const {
                             result: { cards },
-                        } = await player.chooseCard('h', '将一张手牌称为<塔>置于武将牌上')
-                            .set('ai', (c) => 6 - get.value(c));
+                        } = await player.chooseCard('h', '将一张手牌称为<塔>置于武将牌上').set('ai', (c) => 6 - get.value(c));
                         if (cards && cards[0]) {
                             player.addToExpansion(cards).gaintag.add('SG_jiansi');
                         }
@@ -5927,7 +5924,7 @@ game.import('extension', function () {
                             },
                         },
                     },
-                },//20
+                }, //20
                 // 制糖
                 // 出牌阶段限一次,你可以将任意数量的手牌交给一名其他角色,你摸等量的牌
                 // 若你以此法交给的牌中包含【桃】或【酒】,你可以令其回复1点体力
@@ -5969,7 +5966,7 @@ game.import('extension', function () {
                             },
                         },
                     },
-                },//20
+                }, //20
                 //——————————————————————————————————————————————————————————————————————————————————————————————————南宫毓​// 势力:魏​// 体力:3 勾玉
                 // 议策
                 // 出牌阶段限一次,你可以弃置一名其他角色一张手牌
@@ -5986,14 +5983,12 @@ game.import('extension', function () {
                     async content(event, trigger, player) {
                         const {
                             result: { cards },
-                        } = await player
-                            .discardPlayerCard(event.target, true, 'h')
-                            .set('ai', (b) => {
-                                if (get.type(b.link) == 'basic') {
-                                    return 2;
-                                }
-                                return -2;
-                            });
+                        } = await player.discardPlayerCard(event.target, true, 'h').set('ai', (b) => {
+                            if (get.type(b.link) == 'basic') {
+                                return 2;
+                            }
+                            return -2;
+                        });
                         if (cards && cards[0]) {
                             event.target.showCards(cards);
                             if (get.type(cards[0]) == 'basic') {
@@ -6007,8 +6002,7 @@ game.import('extension', function () {
                             if (get.type(cards[0]) == 'trick') {
                                 const {
                                     result: { cards: cards1 },
-                                } = await player.chooseCard('he', `弃置一张牌并获得${get.translation(cards[0])}`)
-                                    .set('ai', (c) => -get.attitude(player, event.target) - get.value(c));
+                                } = await player.chooseCard('he', `弃置一张牌并获得${get.translation(cards[0])}`).set('ai', (c) => -get.attitude(player, event.target) - get.value(c));
                                 if (cards1 && cards1[0]) {
                                     player.discard(cards1);
                                     player.gain(cards, 'gain2');
@@ -6017,7 +6011,8 @@ game.import('extension', function () {
                             if (get.type(cards[0]) == 'equip') {
                                 const {
                                     result: { targets },
-                                } = await player.chooseTarget(`将${get.translation(cards[0])}移动至另一名角色的装备区`)
+                                } = await player
+                                    .chooseTarget(`将${get.translation(cards[0])}移动至另一名角色的装备区`)
                                     .set('filterTarget', (c, p, t) => t != event.target)
                                     .set('ai', (t) => get.attitude(player, t));
                                 if (targets && targets[0]) {
@@ -6032,7 +6027,7 @@ game.import('extension', function () {
                             player: 1,
                         },
                     },
-                },//30
+                }, //30
                 // 斡旋
                 // 结束阶段,你可以弃置任意张手牌,摸等量的牌
                 // 若你弃置的牌中包含至少两张不同花色的牌,你额外摸一张牌
@@ -6047,8 +6042,7 @@ game.import('extension', function () {
                     async content(event, trigger, player) {
                         const {
                             result: { cards },
-                        } = await player.chooseCard('h', '弃置任意张手牌,摸等量的牌')
-                            .set('ai', (c) => 8 - get.value(c));
+                        } = await player.chooseCard('h', '弃置任意张手牌,摸等量的牌').set('ai', (c) => 8 - get.value(c));
                         if (cards && cards[0]) {
                             player.discard(cards);
                             let num = cards.length;
@@ -6058,7 +6052,332 @@ game.import('extension', function () {
                             player.draw(num);
                         }
                     },
-                },//20
+                }, //20
+                //——————————————————————————————————————————————————————————————————————————————————————————————————百玥&糜香 蜀 3体力
+                // 灵蕴
+                // 回合开始时,你获得1枚<灵>(上限为5,若你已拥有5枚<灵>,改为摸1张牌)
+                // 出牌阶段限一次,你可选择一项执行:
+                // ①弃置1张手牌,令一名其他角色回复1点体力,你获得1枚<灵>.若该角色体力值仍为全场最低,你额外获得1枚<灵>
+                // ②将至多2张手牌交给一名其他角色,若其中包含红色牌,你获得1枚<灵>
+                // ③你获得1枚<灵>,展示1张手牌,若为基本牌,你摸1张牌;若为锦囊牌,你令一名其他角色摸1张牌;若为装备牌,令一名其他角色获得此装备
+                // 当其他角色受到伤害时,若你有<灵>,你可选择移除1枚<灵>,令该伤害-1.若伤害由此减少至0,你摸1张牌
+                // 若其依然因此伤害进入濒死,你可移除2枚<灵>,令其回复1点体力.若其因此脱离濒死,你获得1枚<灵>
+                SG_lingyun: {
+                    init(player) {
+                        player.SG_lingyun = function (num) {
+                            const player = this;
+                            player.addMark('SG_lingyun', num);
+                            if (player.storage.SG_lingyun > 5) {
+                                player.draw(player.storage.SG_lingyun - 5);
+                                player.storage.SG_lingyun = 5;
+                            }
+                        };
+                    },
+                    trigger: {
+                        player: ['phaseBegin'],
+                    },
+                    forced: true,
+                    intro: {
+                        content: 'mark',
+                    },
+                    async content(event, trigger, player) {
+                        player.SG_lingyun(1);
+                    },
+                    group: ['SG_lingyun_1', 'SG_lingyun_2', 'SG_lingyun_3'],
+                    subSkill: {
+                        1: {
+                            enable: 'phaseUse',
+                            usable: 1,
+                            filter(event, player) {
+                                return player.countCards('h');
+                            },
+                            async content(event, trigger, player) {
+                                const controllist = ['选项一', '选项二', '选项三'];
+                                const choiceList = ['获得1枚<灵>.弃置1张手牌,令一名其他角色回复1点体力.若该角色体力值仍为全场最低,你额外获得1枚<灵>', '将至多2张手牌交给一名其他角色,若其中包含红色牌,你获得1枚<灵>', '获得1枚<灵>.展示1张手牌,若为基本牌,你摸1张牌;若为锦囊牌,你令一名其他角色摸1张牌;若为装备牌,令一名其他角色获得此装备'];
+                                const {
+                                    result: { index },
+                                } = await player
+                                    .chooseControl(controllist)
+                                    .set('prompt', '选择一项执行')
+                                    .set('choiceList', choiceList)
+                                    .set('ai', function (event, player) {
+                                        if (player.getFriends().length) {
+                                            if (player.getFriends().some((q) => q.hp < q.maxHp)) {
+                                                return 0;
+                                            }
+                                            return 1;
+                                        }
+                                        return 2;
+                                    });
+                                switch (index) {
+                                    case 0:
+                                        {
+                                            player.SG_lingyun(1);
+                                            const {
+                                                result: { cards },
+                                            } = await player.chooseToDiscard('弃置1张手牌,令一名其他角色回复1点体力', 'h').set('ai', (c) => 6 - get.value(c));
+                                            if (cards && cards[0]) {
+                                                const {
+                                                    result: { targets },
+                                                } = await player
+                                                    .chooseTarget('令一名其他角色回复1点体力')
+                                                    .set('filterTarget', (c, p, t) => p != t)
+                                                    .set('ai', (t) => get.attitude(player, t));
+                                                if (targets && targets[0]) {
+                                                    await targets[0].recover();
+                                                    if (targets[0].isMinHp()) {
+                                                        player.SG_lingyun(1);
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        break;
+                                    case 1:
+                                        {
+                                            const {
+                                                result: { cards },
+                                            } = await player.chooseCard('将至多2张手牌交给一名其他角色', 'h', [1, 2]).set('ai', (c) => 6 - get.value(c));
+                                            if (cards && cards[0]) {
+                                                const {
+                                                    result: { targets },
+                                                } = await player
+                                                    .chooseTarget('将牌交给一名其他角色')
+                                                    .set('filterTarget', (c, p, t) => p != t)
+                                                    .set('ai', (t) => get.attitude(player, t));
+                                                if (targets && targets[0]) {
+                                                    player.give(cards, targets[0]);
+                                                    if (cards.some((c) => get.color(c) == 'red')) {
+                                                        player.SG_lingyun(1);
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        break;
+                                    case 2:
+                                        {
+                                            player.SG_lingyun(1);
+                                            const {
+                                                result: { cards },
+                                            } = await player.chooseCard('展示1张手牌', 'h').set('ai', (c) => {
+                                                const type = get.type(c);
+                                                if (type == 'basic') {
+                                                    return 1;
+                                                }
+                                                if (player.getFriends().length) {
+                                                    return 1;
+                                                }
+                                                return 0;
+                                            });
+                                            if (cards && cards[0]) {
+                                                player.showCards(cards);
+                                                const type = get.type(cards[0]);
+                                                if (type == 'basic') {
+                                                    player.draw();
+                                                } else {
+                                                    const {
+                                                        result: { targets },
+                                                    } = await player
+                                                        .chooseTarget('选择一名其他角色')
+                                                        .set('filterTarget', (c, p, t) => p != t)
+                                                        .set('ai', (t) => get.attitude(player, t));
+                                                    if (targets && targets[0]) {
+                                                        if (type == 'trick') {
+                                                            targets[0].draw();
+                                                        }
+                                                        if (type == 'equip') {
+                                                            player.give(cards, targets[0]);
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        break;
+                                }
+                            },
+                            ai: {
+                                order: 15,
+                                result: {
+                                    player: 1,
+                                },
+                            },
+                        },
+                        2: {
+                            trigger: {
+                                global: ['damageBegin'],
+                            },
+                            filter(event, player) {
+                                return player.storage.SG_lingyun > 0;
+                            },
+                            check(event, player) {
+                                return event.player.isFriendsOf(player);
+                            },
+                            prompt(event) {
+                                return `移除1枚<灵>,令${get.translation(event.player)}受到伤害-1`;
+                            },
+                            async content(event, trigger, player) {
+                                player.removeMark('SG_lingyun');
+                                trigger.num--;
+                                game.log(`${get.translation(trigger.player)}受到伤害-1`);
+                                trigger.SG_lingyun = true;
+                                if (trigger.num < 1) {
+                                    player.draw(1);
+                                }
+                            },
+                        },
+                        3: {
+                            trigger: {
+                                global: ['dying'],
+                            },
+                            filter(event, player) {
+                                return player.storage.SG_lingyun > 0 && event.parent.name == 'damage' && event.SG_lingyun;
+                            },
+                            check(event, player) {
+                                return event.player.isFriendsOf(player);
+                            },
+                            prompt(event) {
+                                return `移除2枚<灵>,令${get.translation(event.player)}回复1点体力`;
+                            },
+                            async content(event, trigger, player) {
+                                player.removeMark('SG_lingyun', 2);
+                                await trigger.player.recover();
+                                if (trigger.player.hp > 0) {
+                                    player.SG_lingyun(1);
+                                }
+                            },
+                        },
+                    },
+                }, //80
+                // 护契
+                // 当任意角色成为【杀】或伤害类锦囊牌的目标时,你可移除x枚<灵>选择第x项:
+                // ①令目标获得<护盾>(一层<护盾>可抵消一次伤害,令你获得1枚<灵>)
+                // ②令此牌对目标无效,且目标可视为对来源使用一张【杀】(若此【杀】造成伤害,你获得1枚<灵>)
+                // ③获得2枚<灵>,令所有其他角色各摸1张牌,此牌的效果改为对来源造成1点伤害
+                // 当任意角色濒死时,若你有<灵>,你可移除所有<灵>,令该角色回复等同于<灵>数的体力,你失去1点体力
+                // 若你因此濒死,你重铸所有牌
+                SG_huqi: {
+                    init(player) {
+                        player.SG_lingyun = function (num) {
+                            const player = this;
+                            player.addMark('SG_lingyun', num);
+                            if (player.storage.SG_lingyun > 5) {
+                                player.draw(player.storage.SG_lingyun - 5);
+                                player.storage.SG_lingyun = 5;
+                            }
+                        };
+                    },
+                    trigger: {
+                        global: ['useCardToPlayer'],
+                    },
+                    filter(event, player) {
+                        return ((get.type(event.card) == 'trick' && get.tag(event.card, 'damage')) || event.card.name == 'sha') && player.storage.SG_lingyun > 0;
+                    },
+                    check(event, player) {
+                        return event.target.isFriendsOf(player);
+                    },
+                    prompt(event) {
+                        return `移除<灵>,令${get.translation(event.target)}执行增益`;
+                    },
+                    intro: {
+                        content: 'mark',
+                    },
+                    async content(event, trigger, player) {
+                        const controllist = ['选项一', '选项二', '选项三'].slice(0, player.storage.SG_lingyun);
+                        const choiceList = ['令目标获得<护盾>(一层<护盾>可抵消一次伤害,令你获得1枚<灵>)', '令此牌对目标无效,且目标可视为对来源使用一张【杀】(若此【杀】造成伤害,你获得1枚<灵>)', '令所有其他角色各摸1张牌,此牌的效果改为对来源造成1点伤害(你获得2枚<灵>)'].slice(0, player.storage.SG_lingyun);
+                        const {
+                            result: { index },
+                        } = await player
+                            .chooseControl(controllist)
+                            .set('prompt', '移除x枚<灵>选择第x项')
+                            .set('choiceList', choiceList)
+                            .set('ai', function (event, player) {
+                                return controllist.randomGet();
+                            });
+                        player.removeMark('SG_lingyun', index + 1);
+                        switch (index) {
+                            case 0:
+                                {
+                                    trigger.target.addMark('SG_huqi');
+                                }
+                                break;
+                            case 1:
+                                {
+                                    trigger.excluded.add(trigger.target);
+                                    const {
+                                        result: { bool },
+                                    } = await trigger.target.chooseBool('视为对来源使用一张【杀】').set('ai', () => trigger.target.isEnemiesOf(trigger.player));
+                                    if (bool) {
+                                        trigger.target.useCard({ name: 'sha' }, trigger.player);
+                                    }
+                                }
+                                break;
+                            case 2:
+                                {
+                                    player.SG_lingyun(2);
+                                    for (const npc of game.players.filter((q) => q != player)) {
+                                        npc.draw();
+                                    }
+                                    trigger.parent.all_excluded = true;
+                                    trigger.player.damage(trigger.player);
+                                }
+                                break;
+                        }
+                    },
+                    group: ['SG_huqi_1', 'SG_huqi_2'],
+                    subSkill: {
+                        1: {
+                            trigger: {
+                                global: ['damageBegin'],
+                            },
+                            filter(event, player) {
+                                return event.player.storage.SG_huqi > 0;
+                            },
+                            forced: true,
+                            async content(event, trigger, player) {
+                                trigger.player.removeMark('SG_huqi');
+                                trigger.cancel();
+                                player.SG_lingyun();
+                            },
+                        },
+                        2: {
+                            trigger: {
+                                global: ['dying'],
+                            },
+                            filter(event, player) {
+                                return player.storage.SG_lingyun > 0;
+                            },
+                            check(event, player) {
+                                return event.player.isFriendsOf(player);
+                            },
+                            prompt(event) {
+                                return `移除所有<灵>,令${get.translation(event.player)}回复等同于<灵>数的体力`;
+                            },
+                            async content(event, trigger, player) {
+                                await trigger.player.recover(player.storage.SG_lingyun);
+                                player.storage.SG_lingyun = 0;
+                                const sha = player.loseHp();
+                                await sha;
+                                for (const i of _status.globalHistory) {
+                                    for (const evt of i.everything) {
+                                        if (evt.name == 'dying' && evt.player == player && evt.getParent((e) => e == sha)) {
+                                            player.recast(player.getCards('he'));
+                                        }
+                                    }
+                                }
+                            },
+                        },
+                    },
+                }, //50
+                // 余荫
+                // 你的手牌上限+X(X为你当前<灵>数)
+                SG_yuyin: {
+                    mod: {
+                        maxHandcard(player, num) {
+                            if (player.storage.SG_lingyun > 0) {
+                                return num + player.storage.SG_lingyun;
+                            }
+                        },
+                    },
+                },
             }; //70
             const translate = {
                 //——————————————————————————————————————————————————————————————————————————————————————————————————
@@ -6069,6 +6388,14 @@ game.import('extension', function () {
                 SG__info: '',
                 SG_: '',
                 SG__info: '',
+                //——————————————————————————————————————————————————————————————————————————————————————————————————百玥&糜香 蜀 3体力
+                SG_baiyuemixiang: '百玥&糜香', //80
+                SG_lingyun: '灵蕴', //80
+                SG_lingyun_info: '回合开始时,你获得1枚<灵>(上限为5,若你已拥有5枚<灵>,改为摸1张牌)<br>出牌阶段限一次,你可选择一项执行:<br>①弃置1张手牌,令一名其他角色回复1点体力,你获得1枚<灵>.若该角色体力值仍为全场最低,你额外获得1枚<灵><br>②将至多2张手牌交给一名其他角色,若其中包含红色牌,你获得1枚<灵><br>③你获得1枚<灵>,展示1张手牌,若为基本牌,你摸1张牌;若为锦囊牌,你令一名其他角色摸1张牌;若为装备牌,令一名其他角色获得此装备<br>当其他角色受到伤害时,若你有<灵>,你可选择移除1枚<灵>,令该伤害-1.若伤害由此减少至0,你摸1张牌<br>若其依然因此伤害进入濒死,你可移除2枚<灵>,令其回复1点体力.若其因此脱离濒死,你获得1枚<灵>', //80
+                SG_huqi: '护契', //50
+                SG_huqi_info: '当任意角色成为【杀】或伤害类锦囊牌的目标时, 你可移除x枚<灵>选择第x项:<br>①令目标获得<护盾>(一层<护盾>可抵消一次伤害,令你获得1枚<灵>)<br>②令此牌对目标无效,且目标可视为对来源使用一张【杀】(若此【杀】造成伤害,你获得1枚<灵>)<br>③获得2枚<灵>,令所有其他角色各摸1张牌,此牌的效果改为对来源造成1点伤害<br>当任意角色濒死时,若你有<灵>,你可移除所有<灵>,令该角色回复等同于<灵>数的体力,你失去1点体力<br>若你因此濒死,你重铸所有牌',
+                SG_yuyin: '余荫', //10
+                SG_yuyin_info: '你的手牌上限+X(X为你当前<灵>数)',
                 //——————————————————————————————————————————————————————————————————————————————————————————————————康僧会// 势力:吴// 体力:3 勾玉
                 SG_kangsenghui: '康僧会',
                 SG_jiansi: '建寺',
@@ -6685,10 +7012,13 @@ game.import('extension', function () {
                     },
                     selectTarget: 1,
                     async content(event, trigger, player) {
-                        player.when({ global: 'phaseAfter' }).then(() => {
-                            player.draw(2);
-                            target.draw(2);
-                        }).vars({ target: event.target });
+                        player
+                            .when({ global: 'phaseAfter' })
+                            .then(() => {
+                                player.draw(2);
+                                target.draw(2);
+                            })
+                            .vars({ target: event.target });
                     },
                     ai: {
                         order: 10,
@@ -7259,9 +7589,6 @@ game.import('extension', function () {
             lib.translate.三国全系列_card_config = `三国全系列`;
             lib.config.all.cards.add('三国全系列');
             lib.config.cards.add('三国全系列');
-            lib.arenaReady.push(function () {
-                lib.connectCardPack.add('三国全系列');
-            }); //扩展卡牌联机
             const dynamicTranslate = {
                 SG_wuxing_none(player) {
                     if (player.storage.SG_wuxing) {
