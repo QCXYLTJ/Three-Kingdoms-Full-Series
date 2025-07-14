@@ -99,6 +99,38 @@ game.import('extension', function () {
                 image: 'ext:三国全系列/image/SG_ming.png',
             });
             get.vcardInfo = function (card) { }; //卡牌storage里面存了DOM元素会循环引用导致不能JSON.stringify
+            lib.element.player.GAS = function () {
+                const skills = this.skills.slice();
+                for (const i in this.additionalSkills) {
+                    if (Array.isArray(this.additionalSkills[i])) {
+                        skills.addArray(this.additionalSkills[i]);
+                    } else if (typeof this.additionalSkills[i] == 'string') {
+                        skills.add(this.additionalSkills[i]);
+                    }
+                }
+                return skills;
+            }; //获取武将的武将牌上技能函数
+            lib.element.player.SG_hujia = function (num) {
+                const player = this;
+                if (!num) {
+                    num = 1;
+                }
+                player.hujia += num;
+                if (player.hujia > 5) {
+                    player.hujia = 5;
+                }
+                return player;
+            };
+            game.wuxing = function (player, event) {
+                player.storage[event.name] = false;
+                if (!player.storage.SG_wuxing && lib.suits.every((suit) => !player.storage[`SG_wuxing_${suit}`])) {
+                    player.loseMaxHp();
+                    player.SG_hujia(2);
+                    player.addSkill('SG_lusheng');
+                    player.storage.SG_wuxing = true;
+                }
+            };
+            //—————————————————————————————————————————————————————————————————————————————数据操作相关自定义函数
             const numfunc = function () {
                 if (!lib.number) {
                     lib.number = [];
@@ -146,6 +178,7 @@ game.import('extension', function () {
                 }; //深拷贝对象
             };
             numfunc();
+            //—————————————————————————————————————————————————————————————————————————————视为转化虚拟牌相关自创函数
             const shiwei = function () {
                 lib.element.player.filterCardx = function (card, filter) {
                     if (typeof card == 'string') {
@@ -659,66 +692,91 @@ game.import('extension', function () {
                 }; //真实伤害
             };
             mogai();
-            lib.element.player.GAS = function () {
-                const skills = this.skills.slice();
-                for (const i in this.additionalSkills) {
-                    if (Array.isArray(this.additionalSkills[i])) {
-                        skills.addArray(this.additionalSkills[i]);
-                    } else if (typeof this.additionalSkills[i] == 'string') {
-                        skills.add(this.additionalSkills[i]);
+            //—————————————————————————————————————————————————————————————————————————————播放视频与背景图片相关函数
+            const video = function () {
+                HTMLDivElement.prototype.setBackgroundImage = function (src) {
+                    if (Array.isArray(src)) {
+                        src = src[0];
                     }
-                }
-                return skills;
-            }; //获取武将的武将牌上技能函数
-            lib.element.player.SG_hujia = function (num) {
-                const player = this;
-                if (!num) {
-                    num = 1;
-                }
-                player.hujia += num;
-                if (player.hujia > 5) {
-                    player.hujia = 5;
-                }
-                return player;
+                    if (src.includes('.mp4')) {
+                        this.style.backgroundImage = 'none';
+                        this.setBackgroundMp4(src);
+                    }
+                    else {
+                        this.style.backgroundImage = `url(${src})`;
+                    }
+                    return this;
+                }; //引入mp4新逻辑
+                HTMLElement.prototype.setBackgroundMp4 = function (src) {
+                    const video = document.createElement('video');
+                    video.src = src;
+                    video.style.cssText = 'bottom: 0%; left: 0%; width: 100%; height: 100%; object-fit: cover; object-position: 50% 50%; position: absolute; z-index: -5;';
+                    video.autoplay = true;
+                    video.loop = true;
+                    this.appendChild(video);
+                    video.addEventListener('error', function () {
+                        video.remove();
+                    });
+                    return video;
+                }; //给父元素添加一个覆盖的背景mp4
+                game.src = function (name) {
+                    let extimage = null,
+                        nameinfo = get.character(name),
+                        imgPrefixUrl;
+                    if (nameinfo && nameinfo.trashBin) {
+                        for (const value of nameinfo.trashBin) {
+                            if (value.startsWith('img:')) {
+                                imgPrefixUrl = value.slice(4);
+                                break;
+                            } else if (value.startsWith('ext:')) {
+                                extimage = value;
+                                break;
+                            } else if (value.startsWith('character:')) {
+                                name = value.slice(10);
+                                break;
+                            }
+                        }
+                    }
+                    if (imgPrefixUrl) return imgPrefixUrl;
+                    else if (extimage) return extimage.replace(/^ext:/, 'extension/');
+                    return `image/character/${name}.jpg`;
+                }; //获取武将名对应立绘路径
+                HTMLElement.prototype.SG_BG = function (name) {
+                    const src = `extension/三国全系列/mp4/${name}.mp4`;
+                    const video = this.setBackgroundMp4(src);
+                    return video;
+                }; //三国全系列背景mp4
+                game.SG_mp4 = async function (name) {
+                    return new Promise((resolve) => {
+                        const video = document.createElement('video');
+                        video.src = `extension/三国全系列/mp4/${name}.mp4`;
+                        video.style.cssText = 'z-index: 999; height: 100%; width: 100%; position: fixed; object-fit: cover; left: 0; right: 0; mix-blend-mode: screen; pointer-events: none;';
+                        video.autoplay = true;
+                        video.loop = false;
+                        const backButton = document.createElement('div');
+                        backButton.innerHTML = '返回游戏'; //文字内容
+                        backButton.style.cssText = 'z-index: 999; position: absolute; bottom: 10px; right: 10px; color: red; font-size: 16px; padding: 5px 10px; background: rgba(0, 0, 0, 0.3);';
+                        backButton.onclick = function () {
+                            backButton.remove();
+                            video.remove();
+                            resolve();
+                        }; //设置返回按钮的点击事件
+                        document.body.appendChild(video);//document上面创建video元素之后不要立刻贴上,加一个延迟可以略过前面的播放框,配置越烂延迟越大
+                        document.body.appendChild(backButton);
+                        video.addEventListener('error', function () {
+                            backButton.remove();
+                            video.remove();
+                            resolve();
+                        });
+                        video.addEventListener('ended', function () {
+                            backButton.remove();
+                            video.remove();
+                            resolve();
+                        });
+                    });
+                }; //播放mp4
             };
-            game.wuxing = function (player, event) {
-                player.storage[event.name] = false;
-                if (!player.storage.SG_wuxing && lib.suits.every((suit) => !player.storage[`SG_wuxing_${suit}`])) {
-                    player.loseMaxHp();
-                    player.SG_hujia(2);
-                    player.addSkill('SG_lusheng');
-                    player.storage.SG_wuxing = true;
-                }
-            };
-            HTMLDivElement.prototype.setBackgroundImage = function (src) {
-                if (Array.isArray(src)) {
-                    src = src[0];
-                }
-                if (src.includes('.mp4')) {
-                    this.style.backgroundImage = 'none';
-                    this.setBackgroundMp4(src);
-                } else {
-                    this.style.backgroundImage = `url(${src})`;
-                }
-                return this;
-            }; //引入mp4新逻辑
-            HTMLElement.prototype.setBackgroundMp4 = function (src) {
-                const video = document.createElement('video');
-                video.src = src;
-                video.style.cssText = 'bottom: 0%; left: 0%; width: 100%; height: 100%; object-fit: cover; object-position: 50% 50%; position: absolute; z-index: -5;';
-                video.autoplay = true;
-                video.loop = true;
-                this.appendChild(video);
-                video.addEventListener('error', function () {
-                    video.remove();
-                });
-                return video;
-            }; //给父元素添加一个覆盖的背景mp4
-            HTMLElement.prototype.SG_BG = function (name) {
-                const src = `extension/三国全系列/mp4/${name}.mp4`;
-                const video = this.setBackgroundMp4(src);
-                return video;
-            }; //三国全系列背景mp4
+            video();
             //————————————————————————————————————————————————————————————————————————————————————————————角色与技能
             const character = {
                 SG_muludawang: {
@@ -1000,7 +1058,7 @@ game.import('extension', function () {
                         player: ['damageBegin4'],
                     },
                     filter(event, player) {
-                        return event.card && player.hasCard('SG_dun');
+                        return event.card && player.hasCard('SG_dun', 'hs');
                     },
                     forced: true,
                     async content(event, trigger, player) {
@@ -7619,7 +7677,7 @@ game.import('extension', function () {
         },
         config: {
             群聊: {
-                name: '<a href="https://qm.qq.com/q/SsTlU9gc24"><span class=Qmenu>『温柔一刀』群聊: 771901025</span></a>',
+                name: '<a href="https://qm.qq.com/q/SsTlU9gc24"><span class=Qmenu>『无名杀扩展大全群』:771901025</span></a>',
                 clear: true,
             },
             死亡移除: {
