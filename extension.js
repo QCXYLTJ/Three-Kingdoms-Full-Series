@@ -99,17 +99,163 @@ game.import('extension', function () {
                 image: 'ext:三国全系列/image/SG_ming.png',
             });
             get.vcardInfo = function (card) { }; //卡牌storage里面存了DOM元素会循环引用导致不能JSON.stringify
-            lib.element.player.GAS = function () {
-                const skills = this.skills.slice();
-                for (const i in this.additionalSkills) {
-                    if (Array.isArray(this.additionalSkills[i])) {
-                        skills.addArray(this.additionalSkills[i]);
-                    } else if (typeof this.additionalSkills[i] == 'string') {
-                        skills.add(this.additionalSkills[i]);
+            //—————————————————————————————————————————————————————————————————————————————技能相关自创函数
+            const jineng = function () {
+                lib.element.player.qhasSkill = function (s) {
+                    const player = this;
+                    return player.GS().includes(s);
+                };//武将是否拥有某技能
+                lib.element.player.GS = function () {
+                    const player = this;
+                    const skills = player.skills.slice();
+                    for (const i of Array.from(player.node.equips.childNodes)) {
+                        if (Array.isArray(lib.card[i.name].skills)) {
+                            skills.addArray(lib.card[i.name].skills);
+                        }
                     }
-                }
-                return skills;
-            }; //获取武将的武将牌上技能函数
+                    for (const i in player.additionalSkills) {
+                        if (Array.isArray(player.additionalSkills[i])) {
+                            skills.addArray(player.additionalSkills[i]);
+                        } else if (typeof player.additionalSkills[i] == 'string') {
+                            skills.add(player.additionalSkills[i]);
+                        }
+                    }
+                    skills.addArray(Object.keys(player.tempSkills));
+                    skills.addArray(player.hiddenSkills);
+                    skills.addArray(player.invisibleSkills);
+                    return skills;
+                }; //获取武将所有技能函数
+                lib.element.player.GAS = function () {
+                    const player = this;
+                    const skills = player.skills.slice();
+                    for (const i in player.additionalSkills) {
+                        if (Array.isArray(player.additionalSkills[i])) {
+                            skills.addArray(player.additionalSkills[i]);
+                        } else if (typeof player.additionalSkills[i] == 'string') {
+                            skills.add(player.additionalSkills[i]);
+                        }
+                    }
+                    return skills;
+                }; //获取武将的武将牌上技能函数
+                lib.element.player.GES = function () {
+                    const player = this;
+                    const skills = [];
+                    for (const i of Array.from(player.node.equips.childNodes)) {
+                        if (Array.isArray(lib.card[i.name].skills)) {
+                            skills.addArray(lib.card[i.name].skills);
+                        }
+                    }
+                    return skills;
+                }; //获取武将装备技能函数
+                lib.element.player.GTS = function () {
+                    const player = this;
+                    return Object.keys(player.tempSkills);
+                }; //获取武将临时技能函数
+                lib.element.player.RS = function (skillx) {
+                    const player = this;
+                    if (Array.isArray(skillx)) {
+                        for (const i of skillx) {
+                            player.RS(i);
+                        }
+                    } else {
+                        player.skills.remove(skillx);
+                        player.hiddenSkills.remove(skillx);
+                        player.invisibleSkills.remove(skillx);
+                        delete player.tempSkills[skillx];
+                        for (var i in player.additionalSkills) {
+                            player.additionalSkills[i].remove(skillx);
+                        }
+                        player.checkConflict(skillx);
+                        player.RST(skillx);
+                        if (lib.skill.global.includes(skillx)) {
+                            lib.skill.global.remove(skillx);
+                            delete lib.skill.globalmap[skillx];
+                            for (var i in lib.hook.globalskill) {
+                                lib.hook.globalskill[i].remove(skillx);
+                            }
+                        }
+                    }
+                    return player;
+                }; //移除技能函数
+                lib.element.player.RST = function (skills) {
+                    const player = this;
+                    if (typeof skills == 'string') {
+                        skills = [skills];
+                    }
+                    game.expandSkills(skills);
+                    for (const skillx of skills) {
+                        player.initedSkills.remove(skillx);
+                        for (var i in lib.hook) {
+                            if (Array.isArray(lib.hook[i]) && lib.hook[i].includes(skillx)) {
+                                try {
+                                    delete lib.hook[i];
+                                } catch (e) {
+                                    console.log(i + 'lib.hook不能delete');
+                                }
+                            }
+                        }
+                        for (var i in lib.hook.globalskill) {
+                            if (lib.hook.globalskill[i].includes(skillx)) {
+                                lib.hook.globalskill[i].remove(skillx);
+                                if (lib.hook.globalskill[i].length == 0) {
+                                    delete lib.hook.globalskill[i];
+                                }
+                            }
+                        }
+                    }
+                    return player;
+                }; //移除技能时机函数
+                lib.element.player.CS = function () {
+                    const player = this;
+                    const skill = player.GS();
+                    game.expandSkills(skill);
+                    player.skills = [];
+                    player.tempSkills = {};
+                    player.initedSkills = [];
+                    player.invisibleSkills = [];
+                    player.hiddenSkills = [];
+                    player.additionalSkills = {};
+                    for (const key in lib.hook) {
+                        if (key.startsWith(player.playerid)) {
+                            try {
+                                delete lib.hook[key];
+                            } catch (e) {
+                                console.log(key + 'lib.hook不能delete');
+                            }
+                        }
+                    }
+                    for (const hook in lib.hook.globalskill) {
+                        for (const i of skill) {
+                            if (lib.hook.globalskill[hook].includes(i)) {
+                                lib.hook.globalskill[hook].remove(i);
+                            }
+                        }
+                    }
+                    return player;
+                }; //清空所有技能函数
+                lib.element.player.DS = function () {
+                    const player = this;
+                    const skill = player.GS();
+                    game.expandSkills(skill);
+                    player._hookTrigger = ['QQQ_fengjin'];
+                    player.storage.skill_blocker = ['QQQ_fengjin'];
+                    for (const i of skill) {
+                        player.disabledSkills[i] = 'QQQ';
+                        player.storage[`temp_ban_${i}`] = true;
+                    }
+                    return player;
+                }; //失效所有技能函数
+                lib.skill.QQQ_fengjin = {
+                    hookTrigger: {
+                        block: (event, player, triggername, skill) => true,
+                    },
+                    skillBlocker(skill, player) {
+                        const info = lib.skill[skill];
+                        return info && !info.kangxing;
+                    },
+                };
+            }; //技能相关自创函数
+            jineng();
             lib.element.player.SG_hujia = function (num) {
                 const player = this;
                 if (!num) {
@@ -159,23 +305,43 @@ game.import('extension', function () {
                     return Math.max(Number(num), 1);
                 }; //始终返回正数且至少为1
                 window.deepClone = function (obj) {
-                    const clone = {};
-                    for (const key in obj) {
-                        if (obj.hasOwnProperty(key)) {
-                            const info = obj[key];
-                            if (typeof info == 'object') {
-                                if (Array.isArray(info)) {
-                                    clone[key] = info.slice();
-                                } else {
-                                    clone[key] = window.deepClone(info);
-                                }
-                            } else {
-                                clone[key] = info;
+                    if (obj === null || typeof obj !== 'object') {
+                        return obj;
+                    }
+                    if (Array.isArray(obj)) {
+                        return obj.map(item => deepClone(item));
+                    } else {
+                        const clonedObj = {};
+                        for (let key in obj) {
+                            if (obj.hasOwnProperty(key)) {
+                                clonedObj[key] = deepClone(obj[key]);
                             }
                         }
+                        return clonedObj;
                     }
-                    return clone;
                 }; //深拷贝对象
+                window.factorial = function (num) {
+                    num = Math.round(num);
+                    if (num < 0) {
+                        return 0;
+                    }
+                    if (num < 2) {
+                        return 1;
+                    }
+                    let result = 1;
+                    for (let i = 2; i <= num; i++) {
+                        result *= i;
+                    }
+                    return result;
+                }; //阶乘
+                window.isPrime = function (num) {
+                    if (num === 2 || num === 3) return true;
+                    if (num < 2 || num % 2 === 0 || num % 3 === 0) return false;
+                    for (let i = 5; i * i <= num; i += 6) {
+                        if (num % i === 0 || num % (i + 2) === 0) return false;
+                    }
+                    return true;
+                }; // 质数
             };
             numfunc();
             //—————————————————————————————————————————————————————————————————————————————视为转化虚拟牌相关自创函数
@@ -448,8 +614,9 @@ game.import('extension', function () {
             //—————————————————————————————————————————————————————————————————————————————解构魔改本体函数
             const mogai = function () {
                 lib.element.player.dyingResult = async function () {
-                    game.log(this, '濒死');
-                    _status.dying.unshift(this);
+                    const player = this;
+                    game.log(player, '濒死');
+                    _status.dying.unshift(player);
                     for (const i of game.players) {
                         const { result } = await i.chooseToUse({
                             filterCard: (card, player, event) => lib.filter.cardSavable(card, player, _status.dying[0]),
@@ -475,62 +642,61 @@ game.import('extension', function () {
                             dying: _status.dying[0],
                         });
                         if (result?.bool) {
-                            _status.dying.remove(this);
+                            _status.dying.remove(player);
                             break;
                         }
                     }
-                    if (_status.dying.includes(this)) {
-                        await this.die();
+                    if (_status.dying.includes(player)) {
+                        await player.die();
                     }
-                    return this;
+                    return player;
                 }; //濒死结算
                 lib.element.player.yinni = function () {
-                    const name = this.name;
-                    this.storage.rawHp = this.hp;
-                    this.storage.rawMaxHp = this.maxHp;
-                    if (name && lib.character[name]) {
-                        const skill = lib.character[name][3];
-                        if (!this.hiddenSkills) {
-                            this.hiddenSkills = [];
+                    const player = this;
+                    player.storage.rawHp = player.hp;
+                    player.storage.rawMaxHp = player.maxHp;
+                    if (player.skills.length) {
+                        if (!player.hiddenSkills) {
+                            player.hiddenSkills = [];
                         }
-                        if (skill[0]) {
-                            for (const i of skill) {
-                                this.removeSkill(i);
-                            }
-                            this.hiddenSkills.addArray(skill);
+                        for (const i of player.skills.slice()) {
+                            player.removeSkill(i);
+                            player.hiddenSkills.add(i);
                         }
                     }
-                    this.classList.add('unseen');
-                    this.name = 'unknown';
-                    this.sex = 'male';
-                    this.storage.nohp = true;
-                    this.node.hp.hide();
-                    this.addSkill('g_hidden_ai');
-                    this.hp = 1;
-                    this.maxHp = 1;
-                    this.update();
+                    player.classList.add('unseen');
+                    player.name = 'unknown';
+                    player.sex = 'male';
+                    player.storage.nohp = true;
+                    player.node.hp.hide();
+                    player.addSkill('g_hidden_ai');
+                    player.hp = 1;
+                    player.maxHp = 1;
+                    player.update();
+                    return player;
                 }; //隐匿函数
                 lib.element.player.qreinit = function (name) {
+                    const player = this;
                     const info = lib.character[name];
-                    this.name1 = name;
-                    this.name = name;
-                    this.sex = info.sex;
-                    this.changeGroup(info.group, false);
+                    player.name1 = name;
+                    player.name = name;
+                    player.sex = info.sex;
+                    player.changeGroup(info.group, false);
                     for (const i of info.skills) {
-                        this.addSkill(i);
+                        player.addSkill(i);
                     }
-                    this.maxHp = get.infoMaxHp(info.maxHp);
-                    this.hp = this.maxHp;
-                    game.addVideo('reinit3', this, {
+                    player.maxHp = get.infoMaxHp(info.maxHp);
+                    player.hp = player.maxHp;
+                    game.addVideo('reinit3', player, {
                         name: name,
-                        hp: this.maxHp,
-                        avatar2: this.name2 == name,
+                        hp: player.maxHp,
+                        avatar2: player.name2 == name,
                     });
-                    this.smoothAvatar(false);
-                    this.node.avatar.setBackground(name, 'character');
-                    this.node.name.innerHTML = get.translation(name);
-                    this.update();
-                    return this;
+                    player.smoothAvatar(false);
+                    player.node.avatar.setBackground(name, 'character');
+                    player.node.name.innerHTML = get.translation(name);
+                    player.update();
+                    return player;
                 }; //变身
                 lib.element.player.quseCard = async function (card, targets, cards) {
                     const player = this;
@@ -618,29 +784,29 @@ game.import('extension', function () {
                         next.forceDie = true;
                         await next.setContent(info.contentAfter);
                     }
+                    return player;
                 }; //解构用牌
                 lib.element.player.qrevive = function () {
-                    if (this.parentNode != ui.arena) {
-                        ui.arena.appendChild(this);
+                    const player = this;
+                    if (player.parentNode != ui.arena) {
+                        ui.arena.appendChild(player);
                     } //防止被移除节点
-                    this.classList.remove('removing');
-                    this.classList.remove('hidden');
-                    this.classList.remove('dead');
-                    game.log(this, '复活');
-                    if (this.maxHp < 1) this.maxHp = 1;
-                    this.hp = this.maxHp;
-                    game.addVideo('revive', this);
-                    this.removeAttribute('style');
-                    this.node.avatar.style.transform = '';
-                    this.node.avatar2.style.transform = '';
-                    this.node.hp.show();
-                    this.node.equips.show();
-                    this.node.count.show();
-                    this.update();
-                    game.players.add(this);
-                    game.dead.remove(this);
-                    this.draw(Math.min(this.maxHp, 20));
-                    return this;
+                    player.classList.remove('removing', 'hidden', 'dead');
+                    game.log(player, '复活');
+                    player.maxHp = Math.max(lib.character[player.name]?.maxHp || 0, player.maxHp || 0);
+                    player.hp = player.maxHp;
+                    game.addVideo('revive', player);
+                    player.removeAttribute('style');
+                    player.node.avatar.style.transform = '';
+                    player.node.avatar2.style.transform = '';
+                    player.node.hp.show();
+                    player.node.equips.show();
+                    player.node.count.show();
+                    player.update();
+                    game.players.add(player);
+                    game.dead.remove(player);
+                    player.draw(Math.min(player.maxHp, 20));
+                    return player;
                 }; //复活函数
                 lib.element.player.zhenshang = function (num, source, nature) {
                     const player = this;
@@ -654,16 +820,20 @@ game.import('extension', function () {
                     }
                     str += '伤害';
                     game.log(player, str);
-                    if (player.stat[player.stat.length - 1].damaged == undefined) {
-                        player.stat[player.stat.length - 1].damaged = num;
+                    const stat = player.stat;
+                    const statx = stat[stat.length - 1];
+                    if (!statx.damaged) {
+                        statx.damaged = num;
                     } else {
-                        player.stat[player.stat.length - 1].damaged += num;
+                        statx.damaged += num;
                     }
                     if (source) {
-                        if (source.stat[source.stat.length - 1].damage == undefined) {
-                            source.stat[source.stat.length - 1].damage = num;
+                        const stat = source.stat;
+                        const statx = stat[stat.length - 1];
+                        if (!statx.damage) {
+                            statx.damage = num;
                         } else {
-                            source.stat[source.stat.length - 1].damage += num;
+                            statx.damage += num;
                         }
                     }
                     player.hp -= num;
@@ -689,8 +859,65 @@ game.import('extension', function () {
                     if (player.hp <= 0 && player.isAlive()) {
                         player.dying({ source: source });
                     }
+                    return player;
                 }; //真实伤害
-            };
+                lib.element.player.qequip = function (card) {
+                    const player = this;
+                    if (Array.isArray(card)) {
+                        for (const i of card) {
+                            player.qequip(i);
+                        }
+                    } else if (card) {
+                        if (card[card.cardSymbol]) {
+                            const owner = get.owner(card);
+                            const vcard = card[card.cardSymbol];
+                            if (owner) {
+                                owner.vcardsMap?.equips.remove(vcard);
+                            }
+                            player.vcardsMap?.equips.add(vcard);
+                        } else {
+                            const vcard = new lib.element.VCard(card);
+                            const cardSymbol = Symbol('card');
+                            card.cardSymbol = cardSymbol;
+                            card[cardSymbol] = vcard;
+                            player.vcardsMap?.equips.push(vcard);
+                        }
+                        player.node.equips.appendChild(card);
+                        card.style.transform = '';
+                        card.node.name2.innerHTML = `${get.translation(card.suit)}${card.number} ${get.translation(card.name)}`;
+                        const info = lib.card[card.name];
+                        if (info && info.skills) {
+                            for (const i of info.skills) {
+                                player.addSkillTrigger(i);
+                            }
+                        }
+                    }
+                    return player;
+                };
+                lib.element.player.qdie = async function (source) {
+                    const player = this;
+                    await player.qdie1();
+                    await player.qdie2();
+                    return player;
+                };//可以触发死亡相关时机,但是死亡无法避免
+                lib.element.player.qdie1 = async function (source) {
+                    const player = this;
+                    const next = game.createEvent('die');
+                    next.source = source;
+                    next.player = player;
+                    await next.setContent(function () { });
+                    return player;
+                };//触发死亡相关时机
+                lib.element.player.qdie2 = async function (source) {
+                    const player = this;
+                    const next = game.createEvent('diex', false);
+                    next.source = source;
+                    next.player = player;
+                    next._triggered = null;
+                    await next.setContent(lib.element.content.die);
+                    return player;
+                };//斩杀
+            }; //解构魔改本体函数
             mogai();
             //—————————————————————————————————————————————————————————————————————————————播放视频与背景图片相关函数
             const video = function () {
@@ -1030,7 +1257,7 @@ game.import('extension', function () {
                 if (!info.trashBin) {
                     info.trashBin = [`ext:三国全系列/image/${i}.jpg`];
                 }
-                info.dieAudios = [`ext:三国全系列/die/${i}.mp3`];
+                info.dieAudios = [`ext:三国全系列/audio/${i}.mp3`];
             }
             Object.assign(lib.character, character);
             lib.characterPack.三国全系列 = character;
@@ -1919,7 +2146,7 @@ game.import('extension', function () {
                                 return event.player != player;
                             },
                             async content(event, trigger, player) {
-                                let count = numberq1(trigger.num);
+                                let count = Math.min(numberq1(trigger.num), 9);
                                 while (count-- > 0) {
                                     const num = [1, 2, 3].randomGet();
                                     if (num == 1) {
@@ -2290,7 +2517,7 @@ game.import('extension', function () {
                             await sha;
                             const his = player.actionHistory;
                             const evt = his[his.length - 1];
-                            if (evt.damage.some((e) => e.getParent((x) => x == sha))) {
+                            if (evt.damage.some((e) => e.getParent((x) => x == sha, true))) {
                                 player.draw(2);
                             }
                         }
@@ -2313,7 +2540,7 @@ game.import('extension', function () {
                         return event.num < 0;
                     },
                     async content(event, trigger, player) {
-                        let count = numberq1(trigger.num);
+                        let count = Math.min(numberq1(trigger.num), 9);
                         while (count-- > 0) {
                             const {
                                 result: { targets },
@@ -2422,7 +2649,7 @@ game.import('extension', function () {
                 // 同契
                 // 使命技,当一名男性角色濒死时,你可令其体力回复至上限,清空所有负面状态(横置,翻面,废除装备区,判定牌),重置所有技能为游戏开始时的状态,随后你进入灵魂状态(无回合/免疫伤害/免疫死亡)
                 // 成功
-                // 其在两回合内累计造成3点伤害或杀死一名角色,你复活并回复2点体力和1点护甲,且『舞姬』改为回合各限一次
+                // 其在两回合内累计造成3点伤害或击杀一名角色,你复活并回复2点体力和1点护甲,且『舞姬』改为回合各限一次
                 // 失败
                 // 你死亡,其失去所有技能
                 SG_tongqi: {
@@ -3203,11 +3430,11 @@ game.import('extension', function () {
                     filter(event, player) {
                         if (event.card.name == 'sha') {
                             const phaseList = ['phaseZhunbei', 'phaseJudge', 'phaseDiscard', 'phaseUse', 'phaseDraw', 'phaseJieshu'];
-                            const jieduan = event.getParent((e) => phaseList.includes(e.name));
+                            const jieduan = event.getParent((e) => phaseList.includes(e.name), true);
                             const his = player.actionHistory;
                             const evt = his[his.length - 1];
                             for (const i of evt.useCard) {
-                                if (i.getParent((e) => e == jieduan)) {
+                                if (i.getParent((e) => e == jieduan, true)) {
                                     return false;
                                 }
                             }
@@ -4316,7 +4543,7 @@ game.import('extension', function () {
                     },
                     async content(event, trigger, player) {
                         const cards = trigger.cards.filter((q) => get.type(q) == 'equip');
-                        setTimeout(async function () {
+                        setTimeout(function () {
                             player.gain(cards, 'gain2');
                             trigger.player.damage(cards.length);
                         }, 600);
@@ -4345,23 +4572,7 @@ game.import('extension', function () {
                             forced: true,
                             async content(event, trigger, player) {
                                 trigger.cancel();
-                                const card = trigger.cards[0];
-                                if (card) {
-                                    const vcard = new lib.element.VCard(card);
-                                    const cardSymbol = Symbol('card');
-                                    card.cardSymbol = cardSymbol;
-                                    card[cardSymbol] = vcard;
-                                    player.vcardsMap?.equips.push(vcard);
-                                    player.node.equips.appendChild(card);
-                                    card.style.transform = '';
-                                    card.node.name2.innerHTML = `${get.translation(card.suit)}${card.number} ${get.translation(card.name)}`;
-                                }
-                                const info = get.info(card, false);
-                                if (info.skills) {
-                                    for (const i of info.skills) {
-                                        player.addSkillTrigger(i);
-                                    }
-                                }
+                                player.qequip(trigger.cards);
                                 const num = player.countCards('e') - 5;
                                 if (num > 0) {
                                     const {
@@ -4456,7 +4667,7 @@ game.import('extension', function () {
                 // ① 饿鬼:所有角色使用的『桃』视为『兵粮寸断』
                 // ② 畜生:你从正面翻至背面时,摸2张牌;你从背面翻至正面时,获得1点护甲
                 // ③ 地狱:对其他角色造成的伤害值+1(可叠加至+3)
-                // 你杀死角色后,令领域延长一轮
+                // 你击杀角色后,令领域延长一轮
                 SG_liudao: {
                     trigger: {
                         player: ['phaseZhunbeiBegin'],
@@ -4937,7 +5148,7 @@ game.import('extension', function () {
                 }, //30
                 // 引煞
                 // 每轮限一次,你可以弃置两张牌,召唤1个『牛头』或『马面』(无势力,1体力)
-                // 牛马杀死角色后,你回复1点体力;牛马在场时,你免疫伤害
+                // 牛马击杀角色后,你回复1点体力;牛马在场时,你免疫伤害
                 SG_yinsha: {
                     round: 1,
                     enable: 'phaseUse',
@@ -5194,7 +5405,7 @@ game.import('extension', function () {
                                 await sha;
                                 const his = event.target.actionHistory;
                                 const evt = his[his.length - 1];
-                                if (evt.damage.some((e) => e.getParent((x) => x == sha))) {
+                                if (evt.damage.some((e) => e.getParent((x) => x == sha, true))) {
                                     if (event.target.isIn()) {
                                         const list = ['失去体力', '令对方摸两张牌'];
                                         const {
@@ -6431,7 +6642,7 @@ game.import('extension', function () {
                                 await sha;
                                 for (const i of _status.globalHistory) {
                                     for (const evt of i.everything) {
-                                        if (evt.name == 'dying' && evt.player == player && evt.getParent((e) => e == sha)) {
+                                        if (evt.name == 'dying' && evt.player == player && evt.getParent((e) => e == sha, true)) {
                                             player.recast(player.getCards('he'));
                                         }
                                     }
@@ -6549,7 +6760,7 @@ game.import('extension', function () {
                 SG_shihun: '蚀魂',
                 SG_shihun_info: '出牌阶段限一次,你可以弃置一张牌并选择一名没有『冥』的其他角色,令其获得『冥』标记<br>有『冥』角色回合结束时,你对其造成1点伤害,获得其一张手牌或装备区牌,并移除该标记',
                 SG_yinsha: '引煞',
-                SG_yinsha_info: '每轮限一次,你可以弃置两张牌,召唤1个『牛头』或『马面』.牛马杀死角色后,你回复1点体力',
+                SG_yinsha_info: '每轮限一次,你可以弃置两张牌,召唤1个『牛头』或『马面』.牛马击杀角色后,你回复1点体力',
                 SG_tunling: '吞灵',
                 SG_tunling_info: '每有一名角色死亡,你的攻击范围/使用『杀』造成的伤害永久+1',
                 SG_lingyuan: '灵怨',
@@ -6569,7 +6780,7 @@ game.import('extension', function () {
                 SG_sishi: '四时',
                 SG_sishi_info: '轮次转换技<br>春煦:摸牌阶段额外摸3张,手牌上限+4<br>夏炎:出牌阶段『杀』次数+2,可额外指定2个目标<br>秋肃:准备阶段获得所有判定区牌,并将弃牌堆中的判定牌洗入牌堆<br>冬寂:回合限一次,你免疫体力值扣减',
                 SG_liudao: '六道',
-                SG_liudao_info: '准备阶段开始时,选择未使用过的一项领域持续3轮<br>上三道:<br>❶ 天神:其他角色回复体力时,你回复等量体力;其他角色摸牌阶段外摸牌时,你摸等量牌<br>❷ 人间:其他角色使用锦囊牌时,须先交给你1张你选择类别的牌,否则此牌无效<br>❸ 修罗:造成的伤害视为无视防具的雷电伤害<br>下三道:<br>① 饿鬼:所有角色使用的『桃』视为『兵粮寸断』<br>② 畜生:你从正面翻至背面时,摸2张牌;你从背面翻至正面时,获得1点护甲<br>③ 地狱:对其他角色造成的伤害值+1<br>你杀死角色后,令领域延长一轮',
+                SG_liudao_info: '准备阶段开始时,选择未使用过的一项领域持续3轮<br>上三道:<br>❶ 天神:其他角色回复体力时,你回复等量体力;其他角色摸牌阶段外摸牌时,你摸等量牌<br>❷ 人间:其他角色使用锦囊牌时,须先交给你1张你选择类别的牌,否则此牌无效<br>❸ 修罗:造成的伤害视为无视防具的雷电伤害<br>下三道:<br>① 饿鬼:所有角色使用的『桃』视为『兵粮寸断』<br>② 畜生:你从正面翻至背面时,摸2张牌;你从背面翻至正面时,获得1点护甲<br>③ 地狱:对其他角色造成的伤害值+1<br>你击杀角色后,令领域延长一轮',
                 SG_tianshen: '天神',
                 SG_tianshen_info: '其他角色回复体力时,你回复等量体力;其他角色摸牌阶段外摸牌时,你摸等量牌',
                 SG_renjian: '人间',
@@ -6675,7 +6886,7 @@ game.import('extension', function () {
                 SG_wuji: '舞姬',
                 SG_wuji_info: '回合限一次,你可以选择一项:<br>① 愈:令一名角色回复1点体力,若其性别为男,额外获得1层『灵印』;<br>② 锢:弃置一名其他角色区域内两张牌(装备优先),若其为魏或吴势力,其本回合无法使用与弃牌同类型的牌<br>每回合限2次,拥有『灵印』的角色受到伤害后,你获得1点护甲,其摸一张牌',
                 SG_tongqi: '同契',
-                SG_tongqi_info: '使命技,当一名男性角色濒死时,你可令其体力回复至上限,清空所有负面状态(横置,翻面,废除装备区,判定牌),重置所有技能为游戏开始时的状态,随后你进入灵魂状态(无回合/免疫伤害/免疫死亡)<br>成功:其在两回合内累计造成3点伤害或杀死任意角色,你复活并回复2点体力和1点护甲,且『舞姬』改为回合各限一次;<br>失败:你死亡,其失去所有技能',
+                SG_tongqi_info: '使命技,当一名男性角色濒死时,你可令其体力回复至上限,清空所有负面状态(横置,翻面,废除装备区,判定牌),重置所有技能为游戏开始时的状态,随后你进入灵魂状态(无回合/免疫伤害/免疫死亡)<br>成功:其在两回合内累计造成3点伤害或击杀任意角色,你复活并回复2点体力和1点护甲,且『舞姬』改为回合各限一次;<br>失败:你死亡,其失去所有技能',
                 //——————————————————————————————————————————————————————————————————————————————————————————————————等级
                 BOSS: 'BOSS',
                 SSSSS: 'SSSSS',
@@ -7257,7 +7468,7 @@ game.import('extension', function () {
                         const his = player.actionHistory;
                         const evt = his[his.length - 1];
                         for (const i of evt.useCard) {
-                            if (i.getParent((e) => e == event) && i.card.name == 'tao' && i.targets[0] == event.target) {
+                            if (i.getParent((e) => e == event, true) && i.card.name == 'tao' && i.targets[0] == event.target) {
                                 player.addMark('SG_xuechou');
                             }
                         }
@@ -7553,9 +7764,7 @@ game.import('extension', function () {
                                 const card = event.cards[0];
                                 const npc = get.owner(card);
                                 if (npc) {
-                                    const evt = npc.lose(card);
-                                    evt._triggered = null;
-                                    await evt;
+                                    await npc.lose(card).set('_triggered', null);
                                 }
                                 card.selfDestroy();
                             }, 600);
