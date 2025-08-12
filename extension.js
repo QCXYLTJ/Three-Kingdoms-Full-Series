@@ -6786,7 +6786,6 @@ game.import('extension', function () {
                     },
                 },
             }; //70
-            window.ceshiskill = Object.keys(skill);
             const translate = {
                 //——————————————————————————————————————————————————————————————————————————————————————————————————百玥&糜香 蜀 3体力
                 SG_baiyuemixiang: '百玥&糜香', //80
